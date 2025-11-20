@@ -9,7 +9,8 @@ import (
 )
 
 var (
-	ErrRoomNotFound = errors.New("room not found")
+	ErrRoomNotFound      = errors.New("room not found")
+	ErrRoomAlreadyExists = errors.New("room already exists")
 )
 
 type Manager struct {
@@ -25,12 +26,21 @@ func NewManager() *Manager {
 	return m
 }
 
-func (m *Manager) CreateRoom(name string, hostName string) (*Room, error) {
+func (m *Manager) CreateRoom(id string, name string, hostName string) (*Room, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// Generate simple ID and Number
-	id := fmt.Sprintf("room-%d", time.Now().UnixNano())
+	// If ID provided, check for conflict
+	if id != "" {
+		if _, ok := m.rooms[id]; ok {
+			return nil, ErrRoomAlreadyExists
+		}
+	} else {
+		// Generate simple ID
+		id = fmt.Sprintf("room-%d", time.Now().UnixNano())
+	}
+
+	// Generate Number
 	number := fmt.Sprintf("%06d", rand.Intn(1000000))
 
 	host := &Member{
@@ -42,7 +52,6 @@ func (m *Manager) CreateRoom(name string, hostName string) (*Room, error) {
 
 	room := NewRoom(id, number, name, host)
 	m.rooms[id] = room
-	// Also map by number if needed, but for now we just store by ID and search by number if needed
 	
 	return room, nil
 }

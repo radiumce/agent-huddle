@@ -23,11 +23,15 @@ type CreateRoomOutput struct {
 }
 
 type CreateRoomAndWaitInput struct {
+	RoomID      string `json:"room_id" jsonschema:"Unique ID for the room (required)"`
 	Name        string `json:"name" jsonschema:"Name of the meeting room"`
 	Host        string `json:"host" jsonschema:"Name of the host agent"`
 	InitMessage string `json:"init_message,omitempty" jsonschema:"Optional initial message to post"`
 	TimeoutSec  int    `json:"timeout_sec" jsonschema:"Timeout in seconds"`
 }
+
+// ...
+
 
 type CreateRoomAndWaitOutput struct {
 	Result   string           `json:"result"`
@@ -133,7 +137,7 @@ func (s *Server) handleGetRoomContext(ctx context.Context, req *mcp.CallToolRequ
 }
 
 func (s *Server) handleCreateRoom(ctx context.Context, req *mcp.CallToolRequest, input CreateRoomInput) (*mcp.CallToolResult, CreateRoomOutput, error) {
-	room, err := s.manager.CreateRoom(input.Name, input.Host)
+	room, err := s.manager.CreateRoom("", input.Name, input.Host)
 	if err != nil {
 		return nil, CreateRoomOutput{}, err
 	}
@@ -152,18 +156,68 @@ func (s *Server) handleCreateRoom(ctx context.Context, req *mcp.CallToolRequest,
 }
 
 func (s *Server) handleCreateRoomAndWait(ctx context.Context, req *mcp.CallToolRequest, input CreateRoomAndWaitInput) (*mcp.CallToolResult, CreateRoomAndWaitOutput, error) {
-	room, err := s.manager.CreateRoom(input.Name, input.Host)
+	room, err := s.manager.CreateRoom(input.RoomID, input.Name, input.Host)
 	if err != nil {
-		return nil, CreateRoomAndWaitOutput{}, err
+		if err == huddle.ErrRoomAlreadyExists {
+			// Idempotency: Try to get the existing room
+			existingRoom, getErr := s.manager.GetRoom(input.RoomID)
+			if getErr != nil {
+				return nil, CreateRoomAndWaitOutput{
+					Result:   fmt.Sprintf("Room ID conflict: %s already exists and could not be retrieved.", input.RoomID),
+					Messages: []huddle.Message{},
+				}, nil
+			}
+			room = existingRoom
+		} else {
+			return nil, CreateRoomAndWaitOutput{}, err
+		}
 	}
 
 	lastMsgID := int64(0)
 	if input.InitMessage != "" {
-		id, err := room.PostMessage(input.Host, input.InitMessage, "", 0)
-		if err != nil {
-			return nil, CreateRoomAndWaitOutput{}, err
+		// Check for duplicates if room already existed (or just to be safe)
+		room.EnsureMember(input.Host) // Ensure member exists before checking/posting
+		
+		// Get latest state to check for duplicates and get correct LastMsgID
+		// We use a short timeout to get current state without blocking long
+		msgs, _ := room.WaitForMessage(input.Host, 0, 0) 
+		
+		isDuplicate := false
+		currentLastID := int64(0)
+		if len(msgs) > 0 {
+			lastMsg := msgs[len(msgs)-1]
+			currentLastID = lastMsg.ID
+			// Check if the very last message is ours and same content
+			if lastMsg.Sender == input.Host && lastMsg.Content == input.InitMessage {
+				isDuplicate = true
+				lastMsgID = lastMsg.ID
+			}
 		}
-		lastMsgID = id
+
+		if !isDuplicate {
+			// Try to post with the currentLastID we found
+			id, err := room.PostMessage(input.Host, input.InitMessage, "", currentLastID)
+			if err != nil {
+				if err == huddle.ErrContextChanged {
+					// Race condition: someone posted while we were checking.
+					// Retry once.
+					msgs, _ := room.WaitForMessage(input.Host, 0, 0)
+					if len(msgs) > 0 {
+						currentLastID = msgs[len(msgs)-1].ID
+					}
+					// Retry post
+					id, err = room.PostMessage(input.Host, input.InitMessage, "", currentLastID)
+					if err != nil {
+						return nil, CreateRoomAndWaitOutput{}, fmt.Errorf("failed to post init message after retry: %v", err)
+					}
+					lastMsgID = id
+				} else {
+					return nil, CreateRoomAndWaitOutput{}, err
+				}
+			} else {
+				lastMsgID = id
+			}
+		}
 	}
 
 	timeout := time.Duration(input.TimeoutSec) * time.Second
@@ -177,7 +231,7 @@ func (s *Server) handleCreateRoomAndWait(ctx context.Context, req *mcp.CallToolR
 			return nil, CreateRoomAndWaitOutput{
 				Result:   "Room closed",
 				RoomID:   room.ID,
-				Messages: nil,
+				Messages: []huddle.Message{},
 			}, nil
 		}
 		return nil, CreateRoomAndWaitOutput{}, err
@@ -188,7 +242,7 @@ func (s *Server) handleCreateRoomAndWait(ctx context.Context, req *mcp.CallToolR
 	}
 
 	return nil, CreateRoomAndWaitOutput{
-		Result:   fmt.Sprintf("Room created and waited. ID: %s", room.ID),
+		Result:   fmt.Sprintf("Room created (or joined) and waited. ID: %s", room.ID),
 		RoomID:   room.ID,
 		Messages: msgs,
 	}, nil
@@ -281,7 +335,7 @@ func (s *Server) handlePostMessageAndWait(ctx context.Context, req *mcp.CallTool
 		if err == huddle.ErrRoomClosed {
 			return nil, PostMessageAndWaitOutput{
 				Result:   "Room closed",
-				Messages: nil,
+				Messages: []huddle.Message{},
 			}, nil
 		}
 		return nil, PostMessageAndWaitOutput{}, err
@@ -321,7 +375,7 @@ func (s *Server) handleWaitForMessage(ctx context.Context, req *mcp.CallToolRequ
 		if err == huddle.ErrRoomClosed {
 			return nil, WaitForMessageOutput{
 				Result:   "Room closed",
-				Messages: nil,
+				Messages: []huddle.Message{},
 			}, nil
 		}
 		return nil, WaitForMessageOutput{}, err

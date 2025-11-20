@@ -14,13 +14,13 @@ func TestStory1_CreateAndJoin(t *testing.T) {
 	mgr := NewManager()
 	
 	// Host creates room
-	room, err := mgr.CreateRoom("Review Meeting", "HostAgent")
+	room, err := mgr.CreateRoom("", "Project Alpha", "Alice")
 	if err != nil {
 		t.Fatalf("Failed to create room: %v", err)
 	}
 	
-	if room.Name != "Review Meeting" {
-		t.Errorf("Expected room name 'Review Meeting', got %s", room.Name)
+	if room.Name != "Project Alpha" {
+		t.Errorf("Expected room name 'Project Alpha', got %s", room.Name)
 	}
 	
 	// Host posts first message
@@ -51,7 +51,7 @@ func TestStory1_CreateAndJoin(t *testing.T) {
 // * Host priority (concurrent messages)
 func TestStory2_Discussion(t *testing.T) {
 	mgr := NewManager()
-	room, _ := mgr.CreateRoom("Discussion Room", "Host")
+	room, _ := mgr.CreateRoom("", "Discussion Room", "Alice")
 	
 	// Add participant implicitly
 	room.EnsureMember("Participant")
@@ -111,7 +111,7 @@ func TestStory2_Discussion(t *testing.T) {
 // ST-3: 结束会议
 func TestStory3_Close(t *testing.T) {
 	mgr := NewManager()
-	room, _ := mgr.CreateRoom("Closing Room", "Host")
+	room, _ := mgr.CreateRoom("", "Closing Room", "Alice")
 	
 	// Close room
 	room.Close()
@@ -132,7 +132,7 @@ func TestStory3_Close(t *testing.T) {
 // Concurrent Stress Test (Bonus)
 func TestConcurrentMessaging(t *testing.T) {
 	mgr := NewManager()
-	room, _ := mgr.CreateRoom("Stress Room", "Host")
+	room, _ := mgr.CreateRoom("", "Stress Room", "Host")
 	
 	var wg sync.WaitGroup
 	// 10 participants posting 10 messages each
@@ -174,7 +174,7 @@ func TestConcurrentMessaging(t *testing.T) {
 // Test GetRoomContext (Non-blocking history)
 func TestGetRoomContext(t *testing.T) {
 	mgr := NewManager()
-	room, _ := mgr.CreateRoom("Context Room", "Host")
+	room, _ := mgr.CreateRoom("", "Context Room", "Host")
 	
 	// Post some messages
 	room.PostMessage("Host", "Msg 1", "", 0)
@@ -216,7 +216,7 @@ func TestGetRoomContext(t *testing.T) {
 // We verify here that if we get that error, we can find our own message in the history.
 func TestDuplicatePost(t *testing.T) {
 	mgr := NewManager()
-	room, _ := mgr.CreateRoom("Dedupe Room", "Host")
+	room, _ := mgr.CreateRoom("", "Dedupe Room", "Host")
 	
 	// 1. Host posts a message (ID 1)
 	room.PostMessage("Host", "Original Message", "", 0)
@@ -248,5 +248,58 @@ func TestDuplicatePost(t *testing.T) {
 		if !found {
 			t.Errorf("Failed to find original message in history for deduplication")
 		}
+	}
+}
+
+func TestCreateRoomIdempotency(t *testing.T) {
+	mgr := NewManager()
+	roomID := "idempotent-room"
+	host := "Host"
+	initMsg := "Hello World"
+
+	// 1. First creation
+	room, err := mgr.CreateRoom(roomID, "Room", host)
+	if err != nil {
+		t.Fatalf("Failed to create room: %v", err)
+	}
+	_, err = room.PostMessage(host, initMsg, "", 0)
+	if err != nil {
+		t.Fatalf("Failed to post init message: %v", err)
+	}
+
+	// 2. Simulate second call (Idempotency Logic)
+	// This logic mirrors what we implemented in the MCP tool handler
+	
+	// Try create again
+	_, err = mgr.CreateRoom(roomID, "Room", host)
+	if err != ErrRoomAlreadyExists {
+		t.Errorf("Expected ErrRoomAlreadyExists, got %v", err)
+	}
+
+	// "Tool" logic: Get existing room
+	existingRoom, err := mgr.GetRoom(roomID)
+	if err != nil {
+		t.Fatalf("Failed to get existing room: %v", err)
+	}
+
+	// "Tool" logic: Check for duplicate init message
+	existingRoom.EnsureMember(host)
+	msgs, _ := existingRoom.WaitForMessage(host, 0, 0)
+	
+	isDuplicate := false
+	if len(msgs) > 0 {
+		lastMsg := msgs[len(msgs)-1]
+		if lastMsg.Sender == host && lastMsg.Content == initMsg {
+			isDuplicate = true
+		}
+	}
+
+	if !isDuplicate {
+		t.Errorf("Expected to detect duplicate message")
+	}
+
+	// Verify only 1 message exists
+	if len(existingRoom.Messages) != 1 {
+		t.Errorf("Expected 1 message in room, got %d", len(existingRoom.Messages))
 	}
 }
