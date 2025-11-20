@@ -61,7 +61,9 @@ type PostMessageAndWaitOutput struct {
 	Result      string           `json:"result"`
 	Messages    []huddle.Message `json:"messages,omitempty"`
 	NewMessages []huddle.Message `json:"new_messages,omitempty"`
+	LastMsgID   int64            `json:"last_msg_id"`
 }
+
 
 type WaitForMessageInput struct {
 	RoomID     string `json:"room_id" jsonschema:"ID of the room"`
@@ -289,9 +291,15 @@ func (s *Server) handlePostMessageAndWait(ctx context.Context, req *mcp.CallTool
 		msgs = []huddle.Message{}
 	}
 
+	finalLastMsgID := msgID
+	if len(msgs) > 0 {
+		finalLastMsgID = msgs[len(msgs)-1].ID
+	}
+
 	return nil, PostMessageAndWaitOutput{
-		Result:   "Message posted and waited",
-		Messages: msgs,
+		Result:    "Message posted and waited",
+		Messages:  msgs,
+		LastMsgID: finalLastMsgID,
 	}, nil
 }
 
