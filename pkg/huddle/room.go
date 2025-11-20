@@ -11,13 +11,14 @@ var (
 )
 
 // PostMessage adds a message to the room.
-func (r *Room) PostMessage(sender string, content string, recipient string, lastSeenID int64) error {
+// Returns the ID of the posted message.
+func (r *Room) PostMessage(sender string, content string, recipient string, lastSeenID int64) (int64, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	select {
 	case <-r.closeChan:
-		return ErrRoomClosed
+		return 0, ErrRoomClosed
 	default:
 	}
 
@@ -25,7 +26,7 @@ func (r *Room) PostMessage(sender string, content string, recipient string, last
 	if len(r.Messages) > 0 {
 		lastMsg := r.Messages[len(r.Messages)-1]
 		if lastMsg.ID > lastSeenID {
-			return ErrContextChanged
+			return 0, ErrContextChanged
 		}
 	}
 
@@ -49,7 +50,21 @@ func (r *Room) PostMessage(sender string, content string, recipient string, last
 	// Notify waiters by closing the old channel and creating a new one
 	close(r.broadcastChan)
 	r.broadcastChan = make(chan struct{})
-	return nil
+	return msgID, nil
+}
+
+// EnsureMember ensures the member exists in the room. Idempotent.
+func (r *Room) EnsureMember(name string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.Members[name]; !ok {
+		r.Members[name] = &Member{
+			Name:         name,
+			IsHost:       false,
+			Active:       true,
+			LastActiveAt: time.Now(),
+		}
+	}
 }
 
 // WaitForMessage blocks until a new message arrives or timeout.
@@ -92,7 +107,9 @@ func (r *Room) getMessagesSince(lastID int64) []Message {
 func (r *Room) Join(member *Member) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.Members[member.Name] = member
+	if _, ok := r.Members[member.Name]; !ok {
+		r.Members[member.Name] = member
+	}
 }
 
 func (r *Room) Close() {

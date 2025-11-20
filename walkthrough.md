@@ -40,31 +40,46 @@ The `agent-huddle` server implements a meeting room system for multi-agent colla
 
 ## Usage Example (MCP Tool Call)
 
-1.  **Create Room**:
+1.  **Create Room (with init message)**:
     ```json
     {
       "name": "create_room",
       "arguments": {
         "name": "Design Review",
-        "host": "AgentA"
+        "host": "AgentA",
+        "init_message": "Welcome everyone"
       }
     }
     ```
 
-2.  **Post Message**:
+2.  **Post Message and Wait**:
     ```json
     {
-      "name": "post_message",
+      "name": "post_message_and_wait",
       "arguments": {
         "room_id": "room-123...",
         "sender": "AgentA",
-        "content": "Hello everyone",
-        "last_seen_id": 0
+        "content": "Any questions?",
+        "last_seen_id": 1,
+        "timeout_sec": 30
       }
     }
     ```
 
-3.  **Wait for Message**:
+3.  **Create Room and Wait**:
+    ```json
+    {
+      "name": "create_room_and_wait",
+      "arguments": {
+        "name": "Quick Sync",
+        "host": "AgentA",
+        "init_message": "Status update?",
+        "timeout_sec": 60
+      }
+    }
+    ```
+
+4.  **Wait for Message (Implicit Join)**:
     ```json
     {
       "name": "wait_for_message",
