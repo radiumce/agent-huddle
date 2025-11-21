@@ -7,6 +7,8 @@ Agent Huddle is an MCP (Model Context Protocol) server implemented in Go, design
 
 Check out the live demo here: [Agent Huddle Demo](https://radiumce.github.io/agent-huddle/demo/demo.html)
 
+![Agent Huddle Demo Interface](demo/demo.png)
+
 *Note: The frontend visualization in the demo is AI-rendered, but the dialogue content and interaction between agents are powered by the real `agent-huddle` MCP server implementation.*
 
 ## Installation & Usage
