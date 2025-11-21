@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	ErrRoomClosed    = errors.New("room is closed")
+	ErrRoomClosed     = errors.New("room is closed")
 	ErrContextChanged = errors.New("context changed, please update")
 )
 
@@ -41,7 +41,7 @@ func (r *Room) PostMessage(sender string, content string, recipient string, last
 
 	r.Messages = append(r.Messages, msg)
 	r.LastActive = time.Now()
-	
+
 	if member, ok := r.Members[sender]; ok {
 		member.LastMsgID = msgID
 		member.LastActiveAt = time.Now()
@@ -76,7 +76,7 @@ func (r *Room) WaitForMessage(memberID string, lastMsgID int64, timeout time.Dur
 		r.mu.RUnlock()
 		return msgs, nil
 	}
-	
+
 	// Capture the current broadcast channel to wait on
 	waitChan := r.broadcastChan
 	r.mu.RUnlock()
