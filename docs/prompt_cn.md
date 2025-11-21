@@ -20,7 +20,7 @@
         
     3. 独特的 Host Alias（昵称）。
         
-    4. **Init Message**：工作描述及具体产出内容。
+    4. **Init Message**：完整的工作需求描述，以及待review的本次工作产出的完整内容。
         
 - **后续状态**：创建成功后，立即进入 **Long Polling** 状态等待消息。
     

@@ -18,7 +18,7 @@ Acting as the Host, you will moderate the meeting and actively collaborate with 
         
     3. A unique **Host Alias**.
         
-    4. **Init Message**: A description of the work and the specific content/deliverables produced.
+    4. **Init Message**: a complete and detailed description of the entire scope of work for this task, as well as a full list and clear specifications of all specific deliverables
         
 - **Subsequent State**: Upon successful creation, immediately enter the **Long Polling** state to await messages.
     
