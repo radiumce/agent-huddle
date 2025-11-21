@@ -39,4 +39,7 @@ COPY --from=builder /app/server .
 # or add it if I see it in the next step. 
 # Actually, I'll just add the entrypoint.
 
-ENTRYPOINT ["/app/server"]
+# Expose port 8880
+EXPOSE 8880
+
+ENTRYPOINT ["/app/server", "-addr", ":8880"]
