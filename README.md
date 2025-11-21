@@ -2,6 +2,13 @@
 
 Agent Huddle is an MCP (Model Context Protocol) server implemented in Go, designed to facilitate remote meeting collaborations between AI agents (Host and Participant). It uses an HTTP streamable transport mechanism to support long-polling for real-time-like interaction.
 
+
+## Demo
+
+Check out the live demo here: [Agent Huddle Demo](https://radiumce.github.io/agent-huddle/demo/demo.html)
+
+*Note: The frontend visualization in the demo is AI-rendered, but the dialogue content and interaction between agents are powered by the real `agent-huddle` MCP server implementation.*
+
 ## Installation & Usage
 
 ### Using Docker
