@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/chene/agent-huddle/pkg/huddle"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+const DefaultTimeoutSec = 600
 
 // Input/Output structs
 
@@ -16,16 +18,16 @@ type CreateRoomAndWaitInput struct {
 	Name        string `json:"name" jsonschema:"Name of the meeting room"`
 	Host        string `json:"host" jsonschema:"Name of the host agent"`
 	InitMessage string `json:"init_message,omitempty" jsonschema:"Optional initial message to post"`
-	TimeoutSec  int    `json:"timeout_sec" jsonschema:"Timeout in seconds (default 300)"`
+	TimeoutSec  int    `json:"timeout_sec" jsonschema:"Optional, this service is based on the long polling mechanism, and can accept a longer timeout(default 600s), no need to modify it unless necessary"`
 }
 
 // ...
 
-
 type CreateRoomAndWaitOutput struct {
-	Result   string           `json:"result"`
-	RoomID   string           `json:"room_id"`
-	Messages []huddle.Message `json:"messages"`
+	Result    string           `json:"result"`
+	RoomID    string           `json:"room_id"`
+	Messages  []huddle.Message `json:"messages"`
+	LastMsgID int64            `json:"last_msg_id"`
 }
 
 type PostMessageAndWaitInput struct {
@@ -34,7 +36,7 @@ type PostMessageAndWaitInput struct {
 	Content    string `json:"content" jsonschema:"Message content"`
 	Recipient  string `json:"recipient,omitempty" jsonschema:"Recipient name (optional)"`
 	LastSeenID int64  `json:"last_seen_id" jsonschema:"ID of the last message seen by the sender"`
-	TimeoutSec int    `json:"timeout_sec" jsonschema:"Timeout in seconds (default 300)"`
+	TimeoutSec int    `json:"timeout_sec" jsonschema:"Optional, this service is based on the long polling mechanism, and can accept a longer timeout(default 600s) no need to modify it unless necessary"`
 }
 
 type PostMessageAndWaitOutput struct {
@@ -44,12 +46,11 @@ type PostMessageAndWaitOutput struct {
 	LastMsgID   int64            `json:"last_msg_id"`
 }
 
-
 type WaitForMessageInput struct {
 	RoomID     string `json:"room_id" jsonschema:"ID of the room"`
 	MemberName string `json:"member_name" jsonschema:"Name of the waiting member"`
 	LastMsgID  int64  `json:"last_msg_id" jsonschema:"ID of the last message received"`
-	TimeoutSec int    `json:"timeout_sec" jsonschema:"Timeout in seconds (default 300)"`
+	TimeoutSec int    `json:"timeout_sec" jsonschema:"Optional, this service is based on the long polling mechanism, and can accept a longer timeout(default 600s), no need to modify it unless necessary"`
 }
 
 type WaitForMessageOutput struct {
@@ -118,8 +119,9 @@ func (s *Server) handleCreateRoomAndWait(ctx context.Context, req *mcp.CallToolR
 			existingRoom, getErr := s.manager.GetRoom(input.RoomID)
 			if getErr != nil {
 				return nil, CreateRoomAndWaitOutput{
-					Result:   fmt.Sprintf("Room ID conflict: %s already exists and could not be retrieved.", input.RoomID),
-					Messages: []huddle.Message{},
+					Result:    fmt.Sprintf("Room ID conflict: %s already exists and could not be retrieved.", input.RoomID),
+					Messages:  []huddle.Message{},
+					LastMsgID: 0,
 				}, nil
 			}
 			room = existingRoom
@@ -132,11 +134,11 @@ func (s *Server) handleCreateRoomAndWait(ctx context.Context, req *mcp.CallToolR
 	if input.InitMessage != "" {
 		// Check for duplicates if room already existed (or just to be safe)
 		room.EnsureMember(input.Host) // Ensure member exists before checking/posting
-		
+
 		// Get latest state to check for duplicates and get correct LastMsgID
 		// We use a short timeout to get current state without blocking long
-		msgs, _ := room.WaitForMessage(input.Host, 0, 0) 
-		
+		msgs, _ := room.WaitForMessage(input.Host, 0, 0)
+
 		isDuplicate := false
 		currentLastID := int64(0)
 		if len(msgs) > 0 {
@@ -177,16 +179,17 @@ func (s *Server) handleCreateRoomAndWait(ctx context.Context, req *mcp.CallToolR
 
 	timeout := time.Duration(input.TimeoutSec) * time.Second
 	if timeout == 0 {
-		timeout = 300 * time.Second
+		timeout = DefaultTimeoutSec * time.Second
 	}
 
 	msgs, err := room.WaitForMessage(input.Host, lastMsgID, timeout)
 	if err != nil {
 		if err == huddle.ErrRoomClosed {
 			return nil, CreateRoomAndWaitOutput{
-				Result:   "Room closed",
-				RoomID:   room.ID,
-				Messages: []huddle.Message{},
+				Result:    "Room closed",
+				RoomID:    room.ID,
+				Messages:  []huddle.Message{},
+				LastMsgID: lastMsgID,
 			}, nil
 		}
 		return nil, CreateRoomAndWaitOutput{}, err
@@ -196,13 +199,18 @@ func (s *Server) handleCreateRoomAndWait(ctx context.Context, req *mcp.CallToolR
 		msgs = []huddle.Message{}
 	}
 
+	finalLastMsgID := lastMsgID
+	if len(msgs) > 0 {
+		finalLastMsgID = msgs[len(msgs)-1].ID
+	}
+
 	return nil, CreateRoomAndWaitOutput{
-		Result:   fmt.Sprintf("Room created (or joined) and waited. ID: %s", room.ID),
-		RoomID:   room.ID,
-		Messages: msgs,
+		Result:    fmt.Sprintf("Room created (or joined) and waited. ID: %s", room.ID),
+		RoomID:    room.ID,
+		Messages:  msgs,
+		LastMsgID: finalLastMsgID,
 	}, nil
 }
-
 
 func (s *Server) handlePostMessageAndWait(ctx context.Context, req *mcp.CallToolRequest, input PostMessageAndWaitInput) (*mcp.CallToolResult, PostMessageAndWaitOutput, error) {
 	room, err := s.manager.GetRoom(input.RoomID)
@@ -218,7 +226,7 @@ func (s *Server) handlePostMessageAndWait(ctx context.Context, req *mcp.CallTool
 			// Fetch missed messages
 			msgs, fetchErr := room.WaitForMessage(input.Sender, input.LastSeenID, 0)
 			if fetchErr != nil {
-				return nil, PostMessageAndWaitOutput{}, fmt.Errorf("Context changed and failed to fetch updates: %v", fetchErr)
+				return nil, PostMessageAndWaitOutput{}, fmt.Errorf("context changed and failed to fetch updates: %v", fetchErr)
 			}
 
 			// Check if any of the new messages is the one we just tried to post (Idempotency)
@@ -246,7 +254,7 @@ func (s *Server) handlePostMessageAndWait(ctx context.Context, req *mcp.CallTool
 
 	timeout := time.Duration(input.TimeoutSec) * time.Second
 	if timeout == 0 {
-		timeout = 300 * time.Second
+		timeout = DefaultTimeoutSec * time.Second
 	}
 
 	// Wait for messages AFTER the one we just posted
@@ -280,7 +288,7 @@ func (s *Server) handlePostMessageAndWait(ctx context.Context, req *mcp.CallTool
 func (s *Server) handleWaitForMessage(ctx context.Context, req *mcp.CallToolRequest, input WaitForMessageInput) (*mcp.CallToolResult, WaitForMessageOutput, error) {
 	timeout := time.Duration(input.TimeoutSec) * time.Second
 	if timeout == 0 {
-		timeout = 300 * time.Second
+		timeout = DefaultTimeoutSec * time.Second
 	}
 
 	room, err := s.manager.GetRoom(input.RoomID)
