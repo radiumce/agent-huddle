@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Collaboration: Nvidia Q3 FY2026 Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:serif&family=Dancing+Script:wght@600&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .font-serif {
+            font-family: 'Merriweather', serif;
+        }
+
+        .font-script {
+            font-family: 'Dancing Script', cursive;
+        }
+
+        /* Animations */
+        .fade-in-up {
+            animation: fadeInUp 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .pulse-badge {
+            animation: pulse-green 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% {
+                box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 6px rgba(22, 163, 74, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(22, 163, 74, 0);
+            }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900 h-screen flex flex-col overflow-hidden">
+
+    <header
+        class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm z-10 flex-shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="bg-green-600 p-2 rounded-lg text-white">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-slate-800">Financial Analysis Workspace</h1>
+                <div class="flex items-center space-x-2 text-xs text-slate-500">
+                    <span class="flex items-center">
+                        <svg class="mr-1" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                            <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                        Case: NVDA Q3 FY2026
+                    </span>
+                    <span>•</span>
+                    <span class="flex items-center">
+                        <svg class="mr-1" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
+                        </svg>
+                        Team: Research & Review
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center space-x-3" id="controls">
+            <button id="btn-start" onclick="startSimulation()"
+                class="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition-colors">
+                <svg class="mr-2" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+                Start Review Session
+            </button>
+            <button id="btn-skip" onclick="skipToEnd()"
+                class="hidden px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-md font-medium transition-colors">
+                Skip to End
+            </button>
+            <button id="btn-replay" onclick="startSimulation()"
+                class="hidden flex items-center px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md font-medium transition-colors">
+                <svg class="mr-2" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                    <path d="M3 3v5h5" />
+                </svg>
+                Replay
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 flex overflow-hidden">
+
+        <section class="w-2/5 min-w-[400px] bg-white border-r border-slate-200 flex flex-col">
+            <div class="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                <h2 class="font-semibold text-slate-700 text-sm flex items-center">
+                    <svg class="mr-2 text-slate-500" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                    Agent Interaction Log
+                </h2>
+                <span id="live-indicator"
+                    class="hidden text-xs text-green-600 font-bold pulse-badge uppercase px-2 py-0.5 rounded-full bg-green-50">Live
+                    Connection</span>
+            </div>
+
+            <div id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-5 bg-slate-50/30">
+            </div>
+        </section>
+
+        <section class="flex-1 bg-slate-100 p-8 overflow-y-auto flex justify-center">
+
+            <div id="report-empty"
+                class="flex flex-col items-center justify-center text-slate-400 max-w-md text-center h-full">
+                <div class="mb-4 p-4 bg-white rounded-full shadow-sm">
+                    <svg width="48" height="48" class="text-slate-300" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                    </svg>
+                </div>
+                <h3 class="text-lg font-medium text-slate-600">Waiting for Analysis</h3>
+                <p class="text-sm mt-2 text-slate-500">The Research Agent is compiling the Q3 FY2026 data. The report
+                    will appear here for review.</p>
+            </div>
+
+            <div id="report-document"
+                class="hidden w-full max-w-3xl bg-white shadow-xl min-h-[800px] p-12 border border-slate-200 relative transition-all duration-500">
+
+                <div class="border-b-2 border-black pb-6 mb-8">
+                    <div class="flex justify-between items-end">
+                        <div>
+                            <h1 class="text-3xl font-serif font-bold text-slate-900 leading-tight">Nvidia Q3 FY2026
+                                Financial Report & Valuation Evaluation</h1>
+                            <p class="text-slate-500 mt-2 text-sm font-mono">DATE: November 22, 2025 | REF: NVDA-Q3-26
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <span id="status-badge"
+                                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-200 transition-colors duration-300">
+                                <svg class="mr-1" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                </svg>
+                                DRAFT REVIEW
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-8 font-serif text-slate-800">
+
+                    <div class="bg-slate-50 p-6 rounded border border-slate-100">
+                        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider font-sans mb-2">Executive
+                            Summary</h3>
+                        <p class="leading-relaxed">Nvidia (NVDA) continues to demonstrate explosive growth, reporting Q3
+                            FY2026 revenue of $57.0 billion (+62% YoY) and Data Center revenue of $51.2 billion (+66%
+                            YoY). As of Nov 21, 2025, the stock trades around $180.64 with a market cap of ~$4.4
+                            trillion. The evaluation verdict is 'Reasonable to Undervalued' based on growth
+                            acceleration.</p>
+                    </div>
+
+                    <div class="p-2 rounded">
+                        <h3 class="text-lg font-bold text-slate-900 mb-3 flex items-center font-sans">
+                            <svg class="mr-2 text-slate-500" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="20" x2="12" y2="10" />
+                                <line x1="18" y1="20" x2="18" y2="4" />
+                                <line x1="6" y1="20" x2="6" y2="16" />
+                            </svg>
+                            1. Q3 FY2026 Financial Highlights
+                        </h3>
+                        <p class="whitespace-pre-line leading-7 text-slate-700">• Revenue: $57.0 Billion (+62% YoY, +22%
+                            QoQ), beating expectations.
+                            • Data Center Revenue: $51.2 Billion (+66% YoY).
+                            • Earnings Per Share (Non-GAAP): $1.30 (vs consensus $1.25).
+                            • Gross Margin: Expanded to 73.6%, indicating strong pricing power.
+                            • Guidance (Q4 FY2026): Revenue expected to be ~$65.0 billion.</p>
+                    </div>
+
+                    <div id="sec-valuation" class="p-2 rounded transition-all duration-500">
+                        <h3 class="text-lg font-bold text-slate-900 mb-3 flex items-center font-sans">
+                            <svg class="mr-2 text-slate-500" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                                <polyline points="17 6 23 6 23 12" />
+                            </svg>
+                            2. Valuation Analysis
+                        </h3>
+                        <div id="content-valuation" class="whitespace-pre-line leading-7 text-slate-700">
+                            <span class="text-slate-400 italic">[Draft Content: Valuation is reasonable based on growth.
+                                Specific PEG and Forward P/E metrics pending Reviewer request...]</span>
+                        </div>
+                    </div>
+
+                    <div id="sec-risks" class="p-2 rounded transition-all duration-500">
+                        <h3 class="text-lg font-bold text-slate-900 mb-3 flex items-center font-sans">
+                            <svg class="mr-2 text-slate-500" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                                <line x1="12" y1="8" x2="12" y2="12" />
+                                <line x1="12" y1="16" x2="12.01" y2="16" />
+                            </svg>
+                            3. Opportunity & Risk Assessment
+                        </h3>
+                        <div id="content-risks" class="whitespace-pre-line leading-7 text-slate-700">
+                            <span class="text-slate-400 italic">[Draft Content: Risks include customer concentration and
+                                competition. Margins are stable...]</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div id="report-footer"
+                    class="mt-16 pt-8 border-t border-slate-200 flex justify-between items-end opacity-0 transition-opacity duration-700">
+                    <div class="flex space-x-12 font-sans text-xs text-slate-500">
+                        <div>
+                            <div
+                                class="h-8 w-32 border-b border-slate-300 mb-1 flex items-end pb-1 font-script text-lg text-blue-600">
+                                Research_Agent_01</div>
+                            <p>PREPARED BY</p>
+                        </div>
+                        <div>
+                            <div
+                                class="h-8 w-32 border-b border-slate-300 mb-1 flex items-end pb-1 font-script text-lg text-purple-600">
+                                Reviewer_Agent_X</div>
+                            <p>REVIEWED & APPROVED</p>
+                        </div>
+                    </div>
+                    <button
+                        class="flex items-center text-white bg-slate-800 hover:bg-slate-900 px-4 py-2 rounded text-sm font-medium transition-colors">
+                        <svg class="mr-2" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        Download PDF
+                    </button>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // --- DATA ---
+        const SCRIPT = [
+            {
+                role: "system",
+                content: "Session 'nvda-review-001' created. Task: Finalize Nvidia Q3 FY2026 Evaluation.",
+                timestamp: "10:00 AM"
+            },
+            {
+                role: "author",
+                name: "Research-Agent",
+                content: "Work Progress: All tasks completed. Retrieved Q3 FY2026 Earnings ($57B Rev, $1.30 EPS). Analyzed Sentiment (Bullish, Avg Target ~$246). \n\nI have drafted the 'Nvidia Q3 FY2026 Financial Report & Valuation Evaluation'.\n\nConclusion: Reasonable to Undervalued. Forward P/E has compressed. Ready for feedback.",
+                timestamp: "10:01 AM",
+                action: "draft_ready"
+            },
+            {
+                role: "reviewer",
+                name: "Reviewer-Agent",
+                content: "Hello Research-Agent. I have joined to review. Let's dive into the valuation first. You state the valuation is 'Reasonable to Undervalued'. \n\nCould you provide the specific PEG ratio you calculated and the growth rate assumption used? Also, the Forward P/E range of 40x-55x in the draft is quite wide; can you narrow this down based on consensus FY2027 estimates?",
+                timestamp: "10:03 AM"
+            },
+            {
+                role: "author",
+                name: "Research-Agent",
+                content: "Here are the specific metrics based on the latest consensus data (Nov 21, 2025):\n\n1. PEG Ratio: 0.85 (Source: StockAnalysis, based on 28.40% Long-Term Growth).\n2. Forward P/E (FY2027): Using the consensus EPS estimate of $6.73, the Forward P/E narrows significantly to approximately 26.8x.\n\nThis reinforces the 'Undervalued' conclusion as earnings catch up to valuation.",
+                timestamp: "10:04 AM",
+                action: "update_valuation"
+            },
+            {
+                role: "reviewer",
+                name: "Reviewer-Agent",
+                content: "Thanks. A Forward P/E of ~26.8x looks attractive. \n\nNow, I'd like to probe the risks:\n1. Customer Concentration: What percentage of revenue is from top hyperscalers? Is it increasing?\n2. Competition: Did the Q3 report show any margin compression indicating pricing pressure from AMD or ASICs?",
+                timestamp: "10:06 AM"
+            },
+            {
+                role: "author",
+                name: "Research-Agent",
+                content: "Regarding risks:\n1. Customer Concentration: High. ~39% of revenue comes from the top two customers. This is stable (similar to Q2).\n2. Margins: No compression. Non-GAAP Gross Margin expanded to 73.6% (up from 72.7% in Q2). This suggests Nvidia retains strong pricing power despite competitive announcements.",
+                timestamp: "10:07 AM",
+                action: "update_risks"
+            },
+            {
+                role: "reviewer",
+                name: "Reviewer-Agent",
+                content: "Stable concentration and expanding margins are positive.\n\nFinal question on Growth Trajectory:\n1. Sequential vs YoY: You reported 62% YoY. How does this compare to Q2? Are we seeing deceleration?\n2. Guidance: With Q4 guidance at $65B, what does that imply for the next quarter's YoY growth?",
+                timestamp: "10:09 AM"
+            },
+            {
+                role: "author",
+                name: "Research-Agent",
+                content: "Analysis of Growth Trajectory:\n1. Re-acceleration: Growth has re-accelerated from +43% in Q2 to +62% in Q3.\n2. Momentum: Sequential growth was +$11 Billion QoQ.\n3. Q4 Implication: The $65B guidance implies a YoY growth rate of ~65%.\n\nRather than slowing, growth is accelerating, supporting the thesis that the Blackwell cycle is just beginning.",
+                timestamp: "10:10 AM",
+                action: "update_growth"
+            },
+            {
+                role: "reviewer",
+                name: "Reviewer-Agent",
+                content: "Review Summary:\n1. Valuation: PEG 0.85 and Fwd P/E ~26.8x support the verdict.\n2. Risks: Mitigated by 73.6% margins.\n3. Growth: Confirmed re-acceleration to ~65%.\n\nI have no further questions. The report is approved.",
+                timestamp: "10:11 AM",
+                action: "approved"
+            },
+            {
+                role: "system",
+                content: "Review session concluded. Report Finalized.",
+                timestamp: "10:12 AM",
+                action: "final_generated"
+            }
+        ];
+
+        const FINAL_CONTENT = {
+            valuation: "• Current P/E (TTM): ~56.6x\n• PEG Ratio: 0.85. A PEG under 1.0 signals the stock is undervalued relative to its 5-year growth forecast (~28%).\n• Forward P/E (FY2027): Based on consensus estimates ($6.73 EPS), the P/E compresses significantly to ~26.8x. This rapid compression suggests the stock has not fully priced in the Blackwell cycle's earnings power.",
+            risks: "• Growth Trajectory: Re-accelerating. Growth dipped to ~43% in Q2 but hit 62% in Q3, with Q4 guidance implying ~65% YoY growth.\n• Risks: Customer concentration remains high (~39% from top 2 customers). However, expanding margins (73.6%) prove Nvidia retains pricing power against competitors like AMD or internal hyperscaler silicon."
+        };
+
+        // --- APP STATE & LOGIC ---
+        let currentStep = 0;
+        let isPlaying = false;
+        let timer = null;
+
+        const chatContainer = document.getElementById('chat-container');
+        const btnStart = document.getElementById('btn-start');
+        const btnSkip = document.getElementById('btn-skip');
+        const btnReplay = document.getElementById('btn-replay');
+        const liveIndicator = document.getElementById('live-indicator');
+        const reportEmpty = document.getElementById('report-empty');
+        const reportDoc = document.getElementById('report-document');
+        const statusBadge = document.getElementById('status-badge');
+        const reportFooter = document.getElementById('report-footer');
+
+        const secValuation = document.getElementById('sec-valuation');
+        const contentValuation = document.getElementById('content-valuation');
+        const secRisks = document.getElementById('sec-risks');
+        const contentRisks = document.getElementById('content-risks');
+
+        function startSimulation() {
+            resetUI();
+            isPlaying = true;
+            updateControls();
+            liveIndicator.classList.remove('hidden');
+
+            // Loop
+            processStep();
+        }
+
+        function processStep() {
+            if (!isPlaying || currentStep >= SCRIPT.length) {
+                isPlaying = false;
+                updateControls();
+                liveIndicator.classList.add('hidden');
+                return;
+            }
+
+            const msg = SCRIPT[currentStep];
+            addMessageToChat(msg);
+            handleReportAction(msg.action);
+
+            currentStep++;
+            timer = setTimeout(processStep, 2000); // 2 seconds delay
+        }
+
+        function skipToEnd() {
+            clearTimeout(timer);
+            isPlaying = false;
+
+            // Render all remaining messages
+            while (currentStep < SCRIPT.length) {
+                const msg = SCRIPT[currentStep];
+                addMessageToChat(msg, false); // false = no animation for instant skip
+                handleReportAction(msg.action);
+                currentStep++;
+            }
+
+            updateControls();
+            liveIndicator.classList.add('hidden');
+
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function resetUI() {
+            clearTimeout(timer);
+            currentStep = 0;
+            chatContainer.innerHTML = '';
+
+            // Reset Report UI
+            reportEmpty.classList.remove('hidden');
+            reportDoc.classList.add('hidden');
+            reportFooter.classList.remove('opacity-100');
+            reportFooter.classList.add('opacity-0');
+
+            // Reset Sections
+            resetSection(secValuation, contentValuation, "[Draft Content: Valuation is reasonable based on growth. Specific PEG and Forward P/E metrics pending Reviewer request...]");
+            resetSection(secRisks, contentRisks, "[Draft Content: Risks include customer concentration and competition. Margins are stable...]");
+
+            // Reset Status
+            statusBadge.className = "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-200 transition-colors duration-300";
+            statusBadge.innerHTML = `<svg class="mr-1" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> DRAFT REVIEW`;
+        }
+
+        function updateControls() {
+            if (isPlaying) {
+                btnStart.classList.add('hidden');
+                btnReplay.classList.add('hidden');
+                btnSkip.classList.remove('hidden');
+            } else {
+                btnStart.classList.add('hidden');
+                btnSkip.classList.add('hidden');
+                btnReplay.classList.remove('hidden');
+            }
+        }
+
+        function addMessageToChat(msg, animate = true) {
+            const wrapper = document.createElement('div');
+            wrapper.className = `flex flex-col ${msg.role === 'system' ? 'items-center' : 'items-start'} mb-5 ${animate ? 'fade-in-up' : ''}`;
+
+            if (msg.role === 'system') {
+                wrapper.innerHTML = `
+            <span class="bg-slate-200 text-slate-600 text-[10px] font-mono px-2 py-1 rounded">
+                ${msg.timestamp} - ${msg.content}
+            </span>
+        `;
+            } else {
+                const isAuthor = msg.role === 'author';
+                const avatarColor = isAuthor ? 'bg-blue-500' : 'bg-purple-500';
+                const bubbleColor = isAuthor ? 'bg-white border-slate-200' : 'bg-purple-50 border-purple-100';
+                const roundClass = isAuthor ? 'rounded-tl-none' : 'rounded-tr-none flex-row-reverse';
+                const align = isAuthor ? 'flex-row' : 'flex-row-reverse';
+                const textAlign = isAuthor ? 'items-start' : 'items-end';
+                const margin = isAuthor ? 'mr-3' : 'ml-3';
+
+                // Icons
+                const authorIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+                const reviewerIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+
+                wrapper.innerHTML = `
+            <div class="flex w-full ${align}">
+                <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white mt-1 shadow-sm ${avatarColor} ${margin}">
+                    ${isAuthor ? authorIcon : reviewerIcon}
+                </div>
+                <div class="flex flex-col max-w-[90%] ${textAlign}">
+                    <div class="flex items-center space-x-2 mb-1">
+                        <span class="text-xs font-bold text-slate-700">${msg.name}</span>
+                        <span class="text-[10px] text-slate-400">${msg.timestamp}</span>
+                    </div>
+                    <div class="p-3 rounded-lg text-sm shadow-sm border ${bubbleColor} ${isAuthor ? 'rounded-tl-none' : 'rounded-tr-none'}">
+                        <p class="whitespace-pre-line">${msg.content}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+            }
+
+            chatContainer.appendChild(wrapper);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function handleReportAction(action) {
+            if (!action) return;
+
+            if (action === 'draft_ready') {
+                reportEmpty.classList.add('hidden');
+                reportDoc.classList.remove('hidden');
+                reportDoc.classList.add('fade-in-up');
+            }
+
+            if (action === 'update_valuation') {
+                highlightSection(secValuation, 'blue');
+                contentValuation.innerText = FINAL_CONTENT.valuation;
+                contentValuation.className = "whitespace-pre-line leading-7 text-slate-700"; // remove italic
+            }
+
+            if (action === 'update_risks') {
+                highlightSection(secRisks, 'orange');
+                // Only partial update for risks initially if strictly following script flow, 
+                // but for simplicity we'll wait for growth to fill it fully or fill part now.
+                // The script logic fills growth next. We will fill partial or full text.
+                // Let's keep the placeholder logic simple: The final text combines Risks & Growth.
+                // We will update it fully on 'update_growth' actually, or split it.
+                // For 'update_risks', let's update the Risk part.
+                contentRisks.innerHTML = `
+            <span class="block mb-2">• Risks: Customer concentration remains high (~39% from top 2 customers). However, expanding margins (73.6%) prove Nvidia retains pricing power against competitors like AMD or internal hyperscaler silicon.</span>
+            <span class="text-slate-400 italic">[Growth trajectory update pending...]</span>
+        `;
+                contentRisks.className = "whitespace-pre-line leading-7 text-slate-700";
+            }
+
+            if (action === 'update_growth') {
+                highlightSection(secRisks, 'green'); // Growth is in the same block in this template
+                contentRisks.innerText = FINAL_CONTENT.risks; // Full content
+            }
+
+            if (action === 'approved' || action === 'final_generated') {
+                statusBadge.className = "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200";
+                statusBadge.innerHTML = `<svg class="mr-1" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> APPROVED`;
+
+                reportFooter.classList.remove('opacity-0');
+                reportFooter.classList.add('opacity-100');
+
+                // Remove highlights
+                secValuation.className = "p-2 rounded transition-all duration-500";
+                secRisks.className = "p-2 rounded transition-all duration-500";
+            }
+        }
+
+        function highlightSection(el, color) {
+            // Remove old colors
+            el.className = `p-2 rounded transition-all duration-500 bg-${color}-50 border-l-4 border-${color}-500 pl-3`;
+        }
+
+        function resetSection(el, contentEl, placeholder) {
+            el.className = "p-2 rounded transition-all duration-500";
+            contentEl.innerHTML = `<span class="text-slate-400 italic">${placeholder}</span>`;
+        }
+
+    </script>
+</body>
+
+</html>
