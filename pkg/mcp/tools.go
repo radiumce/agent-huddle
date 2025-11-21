@@ -318,6 +318,9 @@ func (s *Server) handleWaitForMessage(ctx context.Context, req *mcp.CallToolRequ
 
 func (s *Server) handleListRooms(ctx context.Context, req *mcp.CallToolRequest, input ListRoomsInput) (*mcp.CallToolResult, ListRoomsOutput, error) {
 	rooms := s.manager.ListRooms()
+	if rooms == nil {
+		rooms = []*huddle.Room{}
+	}
 	return nil, ListRoomsOutput{Rooms: rooms}, nil
 }
 
