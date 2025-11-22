@@ -17,7 +17,9 @@ COPY . .
 
 # Build the application
 # CGO_ENABLED=0 is important for static binary
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server ./cmd/server
+ARG TARGETOS
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /app/server ./cmd/server
 
 # Run stage
 FROM alpine:latest

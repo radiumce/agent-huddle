@@ -30,6 +30,16 @@ docker pull ghcr.io/radiumce/agent-huddle:latest
     docker build -t agent-huddle .
     ```
 
+    **For Multi-Platform Support (Mac/Linux/Windows):**
+    To build an image that supports multiple architectures (e.g., amd64 for standard servers, arm64 for Apple Silicon/Raspberry Pi), use `docker buildx`:
+    ```bash
+    # Create a new builder instance if you haven't already
+    docker buildx create --use
+
+    # Build and push (or load) for multiple platforms
+    docker buildx build --platform linux/amd64,linux/arm64 -t agent-huddle . --load
+    ```
+
 2.  **Run the container:**
     ```bash
     docker run -p 8880:8880 agent-huddle
