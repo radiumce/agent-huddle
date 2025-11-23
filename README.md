@@ -60,7 +60,7 @@ To connect an MCP client (e.g., an AI agent framework or IDE) to this server, co
 *   **Server URL**: `http://localhost:8880/mcp`
 *   **Transport Type**: HTTP
 
-> **Recommended Clients:** This MCP server is recommended for use with **Cherry Studio** or **ChatWise**.
+> **Recommended Clients:** This MCP server is recommended for use with any LLM client that supports the **HTTP Streamable** transport mcp protocol, such as **Cherry Studio** or **ChatWise**.
 
 ## Agent Prompt Configuration
 
