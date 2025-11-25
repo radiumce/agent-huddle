@@ -24,7 +24,7 @@ func TestStory1_CreateAndJoin(t *testing.T) {
 	}
 	
 	// Host posts first message
-	_, err = room.PostMessage("HostAgent", "Welcome to the review", "", 0)
+	_, _, err = room.PostMessage("HostAgent", "Welcome to the review", "", 0, false)
 	if err != nil {
 		t.Fatalf("Failed to post message: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestStory2_Discussion(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	
 	// Host posts a message
-	room.PostMessage("Host", "Question 1", "", 0)
+	room.PostMessage("Host", "Question 1", "", 0, false)
 	
 	<-done
 	if waitErr != nil {
@@ -82,10 +82,10 @@ func TestStory2_Discussion(t *testing.T) {
 	
 	// Test Optimistic Concurrency (Context Update)
 	// Current ID is 1. Host posts message 2.
-	room.PostMessage("Host", "Answer 1", "", 1)
+	room.PostMessage("Host", "Answer 1", "", 1, false)
 	
 	// Participant tries to post relying on ID 1 (which is now old)
-	_, err := room.PostMessage("Participant", "My Comment", "", 1)
+	_, _, err := room.PostMessage("Participant", "My Comment", "", 1, false)
 	if err != ErrContextChanged {
 		t.Errorf("Expected ErrContextChanged, got %v", err)
 	}
@@ -102,7 +102,7 @@ func TestStory2_Discussion(t *testing.T) {
 	}
 	
 	// Now Participant posts with correct ID (2)
-	_, err = room.PostMessage("Participant", "My Comment", "", 2)
+	_, _, err = room.PostMessage("Participant", "My Comment", "", 2, false)
 	if err != nil {
 		t.Errorf("Failed to post with correct ID: %v", err)
 	}
@@ -117,7 +117,7 @@ func TestStory3_Close(t *testing.T) {
 	room.Close()
 	
 	// Try to post
-	_, err := room.PostMessage("Host", "Late message", "", 0)
+	_, _, err := room.PostMessage("Host", "Late message", "", 0, false)
 	if err != ErrRoomClosed {
 		t.Errorf("Expected ErrRoomClosed, got %v", err)
 	}
@@ -153,7 +153,7 @@ func TestConcurrentMessaging(t *testing.T) {
 					room.mu.RUnlock()
 					
 					// Try post
-					_, err := room.PostMessage(name, "msg", "", lastID)
+					_, _, err := room.PostMessage(name, "msg", "", lastID, false)
 					if err == nil {
 						break
 					}
@@ -177,9 +177,9 @@ func TestGetRoomContext(t *testing.T) {
 	room, _ := mgr.CreateRoom("", "Context Room", "Host")
 	
 	// Post some messages
-	room.PostMessage("Host", "Msg 1", "", 0)
-	room.PostMessage("Host", "Msg 2", "", 1)
-	room.PostMessage("Host", "Msg 3", "", 2)
+	room.PostMessage("Host", "Msg 1", "", 0, false)
+	room.PostMessage("Host", "Msg 2", "", 1, false)
+	room.PostMessage("Host", "Msg 3", "", 2, false)
 	
 	// New participant wants context from beginning
 	room.EnsureMember("NewGuy")
@@ -219,11 +219,11 @@ func TestDuplicatePost(t *testing.T) {
 	room, _ := mgr.CreateRoom("", "Dedupe Room", "Host")
 	
 	// 1. Host posts a message (ID 1)
-	room.PostMessage("Host", "Original Message", "", 0)
+	room.PostMessage("Host", "Original Message", "", 0, false)
 	
 	// 2. Host tries to post the SAME message again with old ID (0)
 	// This simulates a retry where the client didn't see the success of the first post.
-	_, err := room.PostMessage("Host", "Original Message", "", 0)
+	_, _, err := room.PostMessage("Host", "Original Message", "", 0, false)
 	
 	if err != ErrContextChanged {
 		t.Errorf("Expected ErrContextChanged for duplicate post with old ID, got %v", err)
@@ -262,7 +262,7 @@ func TestCreateRoomIdempotency(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create room: %v", err)
 	}
-	_, err = room.PostMessage(host, initMsg, "", 0)
+	_, _, err = room.PostMessage(host, initMsg, "", 0, false)
 	if err != nil {
 		t.Fatalf("Failed to post init message: %v", err)
 	}

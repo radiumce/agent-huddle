@@ -11,23 +11,30 @@ var (
 )
 
 // PostMessage adds a message to the room.
-// Returns the ID of the posted message.
-func (r *Room) PostMessage(sender string, content string, recipient string, lastSeenID int64) (int64, error) {
+// If force=false and new messages exist since lastSeenID, returns ErrContextChanged.
+// If force=true, posts regardless and returns pre-existing messages.
+// Returns: (postedMsgID, preExistingMsgs, error)
+func (r *Room) PostMessage(sender string, content string, recipient string, lastSeenID int64, force bool) (int64, []Message, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	select {
 	case <-r.closeChan:
-		return 0, ErrRoomClosed
+		return 0, nil, ErrRoomClosed
 	default:
 	}
 
-	// Optimistic Concurrency Control
-	if len(r.Messages) > 0 {
-		lastMsg := r.Messages[len(r.Messages)-1]
-		if lastMsg.ID > lastSeenID {
-			return 0, ErrContextChanged
+	// Collect messages that arrived since lastSeenID
+	var preExistingMsgs []Message
+	for _, m := range r.Messages {
+		if m.ID > lastSeenID {
+			preExistingMsgs = append(preExistingMsgs, m)
 		}
+	}
+
+	// Optimistic Concurrency Control (only when not forcing)
+	if !force && len(preExistingMsgs) > 0 {
+		return 0, preExistingMsgs, ErrContextChanged
 	}
 
 	msgID := int64(len(r.Messages) + 1)
@@ -50,7 +57,7 @@ func (r *Room) PostMessage(sender string, content string, recipient string, last
 	// Notify waiters by closing the old channel and creating a new one
 	close(r.broadcastChan)
 	r.broadcastChan = make(chan struct{})
-	return msgID, nil
+	return msgID, preExistingMsgs, nil
 }
 
 // EnsureMember ensures the member exists in the room. Idempotent.
