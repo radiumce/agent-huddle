@@ -2,15 +2,15 @@ package mcp
 
 import (
 	"log"
-	"net/http"
+	"time"
 
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/chene/agent-huddle/pkg/huddle"
+	"github.com/mark3labs/mcp-go/server"
 )
 
 type Server struct {
 	manager *huddle.Manager
-	mcpSrv  *mcp.Server
+	mcpSrv  *server.MCPServer
 }
 
 func NewServer() *Server {
@@ -20,19 +20,19 @@ func NewServer() *Server {
 }
 
 func (s *Server) Start(addr string) error {
-	impl := &mcp.Implementation{
-		Name:    "agent-huddle",
-		Version: "0.1.0",
-	}
-	
-	s.mcpSrv = mcp.NewServer(impl, nil)
+	s.mcpSrv = server.NewMCPServer(
+		"agent-huddle",
+		"0.1.0",
+		server.WithToolCapabilities(true),
+	)
 	s.registerTools()
-	
-	// Create the streamable HTTP handler.
-	handler := mcp.NewStreamableHTTPHandler(func(req *http.Request) *mcp.Server {
-		return s.mcpSrv
-	}, nil)
 
-	log.Printf("MCP server listening on %s (HTTP)", addr)
-	return http.ListenAndServe(addr, handler)
+	// Create the streamable HTTP server with stateful session support
+	httpServer := server.NewStreamableHTTPServer(s.mcpSrv,
+		server.WithHeartbeatInterval(30*time.Second),
+		server.WithStateLess(false), // Stateful connections
+	)
+
+	log.Printf("MCP server listening on %s (HTTP Streamable)", addr)
+	return httpServer.Start(addr)
 }
