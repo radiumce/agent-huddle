@@ -87,17 +87,17 @@ These tools are designed for the main interaction loop. They handle message post
 
 *   **`create_room_and_wait`**
     *   **Purpose**: Creates a new meeting room (or joins an existing one if `room_id` conflicts) and optionally posts an initial message. It then waits for a response or timeout.
-    *   **Inputs**: `room_id` (required), `name`, `host`, `init_message`, `timeout_sec` (default 600s).
+    *   **Inputs**: `room_id` (required), `name`, `host`, `init_message`, `timeout_sec` (default 300s).
     *   **Returns**: Room details and any new messages.
 
 *   **`post_message_and_wait`**
     *   **Purpose**: Posts a message to the room and immediately waits for subsequent messages. Handles concurrency by checking for updates before posting.
-    *   **Inputs**: `room_id`, `sender`, `content`, `last_seen_id`, `timeout_sec` (default 600s).
+    *   **Inputs**: `room_id`, `sender`, `content`, `last_seen_id`, `timeout_sec` (default 300s).
     *   **Returns**: Result of the post and any new messages received during the wait.
 
 *   **`wait_for_message`**
     *   **Purpose**: Waits for new messages in the room without posting anything. Used when the agent is expecting a reply.
-    *   **Inputs**: `room_id`, `member_name`, `last_msg_id`, `timeout_sec` (default 600s).
+    *   **Inputs**: `room_id`, `member_name`, `last_msg_id`, `timeout_sec` (default 300s).
     *   **Returns**: A list of new messages.
 
 ### Utility Tools

@@ -10,7 +10,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-const DefaultTimeoutSec = 600
+const DefaultTimeoutSec = 300
 
 func (s *Server) registerTools() {
 	// create_room_and_wait
@@ -21,7 +21,7 @@ func (s *Server) registerTools() {
 			mcp.WithString("name", mcp.Description("Name of the meeting room")),
 			mcp.WithString("host", mcp.Required(), mcp.Description("Name of the host agent")),
 			mcp.WithString("init_message", mcp.Description("Optional initial message to post")),
-			mcp.WithNumber("timeout_sec", mcp.Description("Optional timeout in seconds (default 600s)")),
+			mcp.WithNumber("timeout_sec", mcp.Description("Optional timeout in seconds (default 300s)")),
 		),
 		s.handleCreateRoomAndWait,
 	)
@@ -35,7 +35,7 @@ func (s *Server) registerTools() {
 			mcp.WithString("content", mcp.Required(), mcp.Description("Message content")),
 			mcp.WithString("recipient", mcp.Description("Recipient name (optional)")),
 			mcp.WithNumber("last_seen_id", mcp.Required(), mcp.Description("ID of the last message seen by the sender")),
-			mcp.WithNumber("timeout_sec", mcp.Description("Optional timeout in seconds (default 600s)")),
+			mcp.WithNumber("timeout_sec", mcp.Description("Optional timeout in seconds (default 300s)")),
 			mcp.WithBoolean("force", mcp.Description("If true, force post even if new messages exist since last_seen_id")),
 		),
 		s.handlePostMessageAndWait,
@@ -50,7 +50,7 @@ func (s *Server) registerTools() {
 			mcp.WithString("content", mcp.Required(), mcp.Description("Message content")),
 			mcp.WithString("recipient", mcp.Description("Recipient name (optional)")),
 			mcp.WithNumber("last_seen_id", mcp.Required(), mcp.Description("ID of the last message seen by the sender")),
-			mcp.WithNumber("timeout_sec", mcp.Description("Optional timeout in seconds (default 600s)")),
+			mcp.WithNumber("timeout_sec", mcp.Description("Optional timeout in seconds (default 300s)")),
 		),
 		s.handleForcePostMessageAndWait,
 	)
@@ -62,7 +62,7 @@ func (s *Server) registerTools() {
 			mcp.WithString("room_id", mcp.Required(), mcp.Description("ID of the room")),
 			mcp.WithString("member_name", mcp.Required(), mcp.Description("Name of the waiting member")),
 			mcp.WithNumber("last_msg_id", mcp.Required(), mcp.Description("ID of the last message received")),
-			mcp.WithNumber("timeout_sec", mcp.Description("Optional timeout in seconds (default 600s)")),
+			mcp.WithNumber("timeout_sec", mcp.Description("Optional timeout in seconds (default 300s)")),
 		),
 		s.handleWaitForMessage,
 	)
@@ -211,9 +211,6 @@ func (s *Server) handleCreateRoomAndWait(ctx context.Context, req mcp.CallToolRe
 	}
 
 	timeout := time.Duration(timeoutSec) * time.Second
-	if timeout == 0 {
-		timeout = DefaultTimeoutSec * time.Second
-	}
 
 	msgs, err := room.WaitForMessage(host, lastMsgID, timeout)
 	if err != nil {
@@ -300,9 +297,6 @@ func (s *Server) doPostMessageAndWait(_ context.Context, req mcp.CallToolRequest
 
 	// Wait for new messages after our post
 	timeout := time.Duration(timeoutSec) * time.Second
-	if timeout == 0 {
-		timeout = DefaultTimeoutSec * time.Second
-	}
 
 	msgs, err := room.WaitForMessage(sender, msgID, timeout)
 	if err != nil {
@@ -341,9 +335,6 @@ func (s *Server) handleWaitForMessage(ctx context.Context, req mcp.CallToolReque
 	timeoutSec := req.GetInt("timeout_sec", DefaultTimeoutSec)
 
 	timeout := time.Duration(timeoutSec) * time.Second
-	if timeout == 0 {
-		timeout = DefaultTimeoutSec * time.Second
-	}
 
 	room, err := s.manager.GetRoom(roomID)
 	if err != nil {
