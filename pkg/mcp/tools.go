@@ -94,6 +94,16 @@ func (s *Server) registerTools() {
 		),
 		s.handleCloseRoom,
 	)
+
+	// leave_room
+	s.mcpSrv.AddTool(
+		mcp.NewTool("leave_room",
+			mcp.WithDescription("Leave a meeting room. This notifies other participants that you have left."),
+			mcp.WithString("room_id", mcp.Required(), mcp.Description("ID of the room")),
+			mcp.WithString("member_name", mcp.Required(), mcp.Description("Name of the member leaving")),
+		),
+		s.handleLeaveRoom,
+	)
 }
 
 // Helper function to return JSON result
@@ -243,7 +253,7 @@ func (s *Server) handleForcePostMessageAndWait(ctx context.Context, req mcp.Call
 	return s.doPostMessageAndWait(ctx, req, true)
 }
 
-func (s *Server) doPostMessageAndWait(ctx context.Context, req mcp.CallToolRequest, forceOverride bool) (*mcp.CallToolResult, error) {
+func (s *Server) doPostMessageAndWait(_ context.Context, req mcp.CallToolRequest, forceOverride bool) (*mcp.CallToolResult, error) {
 	roomID := req.GetString("room_id", "")
 	sender := req.GetString("sender", "")
 	content := req.GetString("content", "")
@@ -377,4 +387,23 @@ func (s *Server) handleCloseRoom(ctx context.Context, req mcp.CallToolRequest) (
 	}
 	room.Close()
 	return jsonResult(map[string]interface{}{"result": "Room closed"})
+}
+
+func (s *Server) handleLeaveRoom(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	roomID := req.GetString("room_id", "")
+	memberName := req.GetString("member_name", "")
+
+	room, err := s.manager.GetRoom(roomID)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	err = room.LeaveRoom(memberName)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	return jsonResult(map[string]interface{}{
+		"result": fmt.Sprintf("Member '%s' has left the room", memberName),
+	})
 }

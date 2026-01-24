@@ -8,6 +8,7 @@ import (
 var (
 	ErrRoomClosed     = errors.New("room is closed")
 	ErrContextChanged = errors.New("context changed, please update")
+	ErrMemberNotFound = errors.New("member not found")
 )
 
 // PostMessage adds a message to the room.
@@ -60,6 +61,23 @@ func (r *Room) PostMessage(sender string, content string, recipient string, last
 	return msgID, preExistingMsgs, nil
 }
 
+// postSystemMessage posts a message from [System] without locking (caller must hold lock).
+func (r *Room) postSystemMessageLocked(content string) {
+	msgID := int64(len(r.Messages) + 1)
+	msg := Message{
+		ID:        msgID,
+		Sender:    "[System]",
+		Content:   content,
+		Timestamp: time.Now(),
+	}
+	r.Messages = append(r.Messages, msg)
+	r.LastActive = time.Now()
+
+	// Notify waiters
+	close(r.broadcastChan)
+	r.broadcastChan = make(chan struct{})
+}
+
 // EnsureMember ensures the member exists in the room. Idempotent.
 func (r *Room) EnsureMember(name string) {
 	r.mu.Lock()
@@ -74,19 +92,58 @@ func (r *Room) EnsureMember(name string) {
 	}
 }
 
+// LeaveRoom marks a member as having left the room and posts a notification.
+func (r *Room) LeaveRoom(memberName string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	member, ok := r.Members[memberName]
+	if !ok {
+		return ErrMemberNotFound
+	}
+
+	member.Left = true
+	member.WaitingSince = nil
+	member.Active = false
+
+	r.postSystemMessageLocked("[" + memberName + "] leaved room.")
+	return nil
+}
+
 // WaitForMessage blocks until a new message arrives or timeout.
 func (r *Room) WaitForMessage(memberID string, lastMsgID int64, timeout time.Duration) ([]Message, error) {
-	r.mu.RLock()
+	// Start heartbeat goroutine on first wait
+	r.heartbeatStart.Do(func() {
+		go r.heartbeatLoop()
+	})
+
+	// Use write lock since we need to modify WaitingSince
+	r.mu.Lock()
 	// Check if we already have new messages
 	if len(r.Messages) > 0 && r.Messages[len(r.Messages)-1].ID > lastMsgID {
 		msgs := r.getMessagesSince(lastMsgID)
-		r.mu.RUnlock()
+		r.mu.Unlock()
 		return msgs, nil
+	}
+
+	// Mark member as waiting
+	if member, ok := r.Members[memberID]; ok {
+		now := time.Now()
+		member.WaitingSince = &now
 	}
 
 	// Capture the current broadcast channel to wait on
 	waitChan := r.broadcastChan
-	r.mu.RUnlock()
+	r.mu.Unlock()
+
+	// Defer clearing wait state
+	defer func() {
+		r.mu.Lock()
+		if member, ok := r.Members[memberID]; ok {
+			member.WaitingSince = nil
+		}
+		r.mu.Unlock()
+	}()
 
 	select {
 	case <-waitChan:
@@ -98,6 +155,62 @@ func (r *Room) WaitForMessage(memberID string, lastMsgID int64, timeout time.Dur
 		return nil, nil // Timeout, no error, just empty result
 	case <-r.closeChan:
 		return nil, ErrRoomClosed
+	}
+}
+
+// heartbeatLoop runs in background and sends heartbeat when all active members are waiting.
+func (r *Room) heartbeatLoop() {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			r.checkAndSendHeartbeat()
+		case <-r.heartbeatStop:
+			return
+		case <-r.closeChan:
+			return
+		}
+	}
+}
+
+// checkAndSendHeartbeat checks if all active (non-left) members are waiting for HeartbeatInterval.
+// Only triggers when there are >= 2 active members all waiting.
+func (r *Room) checkAndSendHeartbeat() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	now := time.Now()
+	allWaiting := true
+	activeMemberCount := 0
+
+	for _, member := range r.Members {
+		if member.Left {
+			continue
+		}
+		activeMemberCount++
+
+		if member.WaitingSince == nil {
+			allWaiting = false
+			break
+		}
+		if now.Sub(*member.WaitingSince) < r.HeartbeatInterval {
+			allWaiting = false
+			break
+		}
+	}
+
+	// Only send heartbeat if >= 2 active members and all are waiting
+	if activeMemberCount >= 2 && allWaiting {
+		r.postSystemMessageLocked(r.HeartbeatMessage)
+		// Reset WaitingSince for all members to avoid repeated heartbeats
+		for _, member := range r.Members {
+			if !member.Left && member.WaitingSince != nil {
+				nowReset := time.Now()
+				member.WaitingSince = &nowReset
+			}
+		}
 	}
 }
 
@@ -127,5 +240,12 @@ func (r *Room) Close() {
 		return
 	default:
 		close(r.closeChan)
+	}
+
+	// Also stop heartbeat
+	select {
+	case <-r.heartbeatStop:
+	default:
+		close(r.heartbeatStop)
 	}
 }
