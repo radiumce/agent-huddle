@@ -9,13 +9,16 @@ import (
 )
 
 type Server struct {
-	manager *huddle.Manager
+	service *huddle.Service
 	mcpSrv  *server.MCPServer
 }
 
-func NewServer() *Server {
+func NewServer(service *huddle.Service) *Server {
+	if service == nil {
+		service = huddle.NewService(nil)
+	}
 	return &Server{
-		manager: huddle.NewManager(),
+		service: service,
 	}
 }
 

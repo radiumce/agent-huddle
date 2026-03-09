@@ -3,10 +3,7 @@ package mcp
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"time"
 
-	"github.com/chene/agent-huddle/pkg/huddle"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
@@ -120,23 +117,11 @@ func (s *Server) handleGetRoomContext(ctx context.Context, req mcp.CallToolReque
 	memberName := req.GetString("member_name", "")
 	lastMsgID := int64(req.GetInt("last_msg_id", 0))
 
-	room, err := s.manager.GetRoom(roomID)
+	resp, err := s.service.GetRoomContext(ctx, roomID, memberName, lastMsgID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
-
-	room.EnsureMember(memberName)
-
-	// Use 0 timeout for non-blocking fetch
-	msgs, err := room.WaitForMessage(memberName, lastMsgID, 0)
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
-	if msgs == nil {
-		msgs = []huddle.Message{}
-	}
-	return jsonResult(map[string]interface{}{"messages": msgs})
+	return jsonResult(resp)
 }
 
 func (s *Server) handleCreateRoomAndWait(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -146,100 +131,11 @@ func (s *Server) handleCreateRoomAndWait(ctx context.Context, req mcp.CallToolRe
 	initMessage := req.GetString("init_message", "")
 	timeoutSec := req.GetInt("timeout_sec", DefaultTimeoutSec)
 
-	room, err := s.manager.CreateRoom(roomID, name, host)
+	resp, err := s.service.CreateRoomAndWait(ctx, roomID, name, host, initMessage, timeoutSec)
 	if err != nil {
-		if err == huddle.ErrRoomAlreadyExists {
-			// Idempotency: Try to get the existing room
-			existingRoom, getErr := s.manager.GetRoom(roomID)
-			if getErr != nil {
-				return jsonResult(map[string]interface{}{
-					"result":      fmt.Sprintf("Room ID conflict: %s already exists and could not be retrieved.", roomID),
-					"messages":    []huddle.Message{},
-					"last_msg_id": 0,
-				})
-			}
-			room = existingRoom
-		} else {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-	}
-
-	lastMsgID := int64(0)
-	if initMessage != "" {
-		// Check for duplicates if room already existed (or just to be safe)
-		room.EnsureMember(host) // Ensure member exists before checking/posting
-
-		// Get latest state to check for duplicates and get correct LastMsgID
-		msgs, _ := room.WaitForMessage(host, 0, 0)
-
-		isDuplicate := false
-		currentLastID := int64(0)
-		if len(msgs) > 0 {
-			lastMsg := msgs[len(msgs)-1]
-			currentLastID = lastMsg.ID
-			// Check if the very last message is ours and same content
-			if lastMsg.Sender == host && lastMsg.Content == initMessage {
-				isDuplicate = true
-				lastMsgID = lastMsg.ID
-			}
-		}
-
-		if !isDuplicate {
-			// Try to post with the currentLastID we found
-			id, _, err := room.PostMessage(host, initMessage, "", currentLastID, false)
-			if err != nil {
-				if err == huddle.ErrContextChanged {
-					// Race condition: someone posted while we were checking.
-					// Retry once.
-					msgs, _ := room.WaitForMessage(host, 0, 0)
-					if len(msgs) > 0 {
-						currentLastID = msgs[len(msgs)-1].ID
-					}
-					// Retry post
-					id, _, err = room.PostMessage(host, initMessage, "", currentLastID, false)
-					if err != nil {
-						return mcp.NewToolResultError(fmt.Sprintf("failed to post init message after retry: %v", err)), nil
-					}
-					lastMsgID = id
-				} else {
-					return mcp.NewToolResultError(err.Error()), nil
-				}
-			} else {
-				lastMsgID = id
-			}
-		}
-	}
-
-	timeout := time.Duration(timeoutSec) * time.Second
-
-	msgs, err := room.WaitForMessage(host, lastMsgID, timeout)
-	if err != nil {
-		if err == huddle.ErrRoomClosed {
-			return jsonResult(map[string]interface{}{
-				"result":      "Room closed",
-				"room_id":     room.ID,
-				"messages":    []huddle.Message{},
-				"last_msg_id": lastMsgID,
-			})
-		}
 		return mcp.NewToolResultError(err.Error()), nil
 	}
-
-	if msgs == nil {
-		msgs = []huddle.Message{}
-	}
-
-	finalLastMsgID := lastMsgID
-	if len(msgs) > 0 {
-		finalLastMsgID = msgs[len(msgs)-1].ID
-	}
-
-	return jsonResult(map[string]interface{}{
-		"result":      fmt.Sprintf("Room created (or joined) and waited. ID: %s", room.ID),
-		"room_id":     room.ID,
-		"messages":    msgs,
-		"last_msg_id": finalLastMsgID,
-	})
+	return jsonResult(resp)
 }
 
 func (s *Server) handlePostMessageAndWait(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -250,7 +146,7 @@ func (s *Server) handleForcePostMessageAndWait(ctx context.Context, req mcp.Call
 	return s.doPostMessageAndWait(ctx, req, true)
 }
 
-func (s *Server) doPostMessageAndWait(_ context.Context, req mcp.CallToolRequest, forceOverride bool) (*mcp.CallToolResult, error) {
+func (s *Server) doPostMessageAndWait(ctx context.Context, req mcp.CallToolRequest, forceOverride bool) (*mcp.CallToolResult, error) {
 	roomID := req.GetString("room_id", "")
 	sender := req.GetString("sender", "")
 	content := req.GetString("content", "")
@@ -259,73 +155,11 @@ func (s *Server) doPostMessageAndWait(_ context.Context, req mcp.CallToolRequest
 	timeoutSec := req.GetInt("timeout_sec", DefaultTimeoutSec)
 	force := req.GetBool("force", false) || forceOverride
 
-	room, err := s.manager.GetRoom(roomID)
+	resp, err := s.service.PostMessageAndWait(ctx, roomID, sender, content, recipient, lastSeenID, timeoutSec, force)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
-
-	room.EnsureMember(sender)
-
-	msgID, preExistingMsgs, err := room.PostMessage(sender, content, recipient, lastSeenID, force)
-	if err != nil {
-		if err == huddle.ErrContextChanged {
-			// Non-force mode: context changed, return pre-existing messages for review
-			return jsonResult(map[string]interface{}{
-				"result":            "Post rejected: New messages available. Please review and retry.",
-				"pre_existing_msgs": preExistingMsgs,
-				"had_pre_existing":  true,
-			})
-		}
-		if err == huddle.ErrRoomClosed {
-			return jsonResult(map[string]interface{}{
-				"result":   "Room closed",
-				"messages": []huddle.Message{},
-			})
-		}
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
-	// Force mode with pre-existing messages: return immediately
-	if force && len(preExistingMsgs) > 0 {
-		return jsonResult(map[string]interface{}{
-			"result":            "Message posted. Pre-existing messages found since last_seen_id.",
-			"pre_existing_msgs": preExistingMsgs,
-			"had_pre_existing":  true,
-			"last_msg_id":       msgID,
-		})
-	}
-
-	// Wait for new messages after our post
-	timeout := time.Duration(timeoutSec) * time.Second
-
-	msgs, err := room.WaitForMessage(sender, msgID, timeout)
-	if err != nil {
-		if err == huddle.ErrRoomClosed {
-			return jsonResult(map[string]interface{}{
-				"result":           "Room closed",
-				"messages":         []huddle.Message{},
-				"had_pre_existing": false,
-				"last_msg_id":      msgID,
-			})
-		}
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
-	if msgs == nil {
-		msgs = []huddle.Message{}
-	}
-
-	finalLastMsgID := msgID
-	if len(msgs) > 0 {
-		finalLastMsgID = msgs[len(msgs)-1].ID
-	}
-
-	return jsonResult(map[string]interface{}{
-		"result":           "Message posted and waited",
-		"messages":         msgs,
-		"had_pre_existing": false,
-		"last_msg_id":      finalLastMsgID,
-	})
+	return jsonResult(resp)
 }
 
 func (s *Server) handleWaitForMessage(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -334,67 +168,38 @@ func (s *Server) handleWaitForMessage(ctx context.Context, req mcp.CallToolReque
 	lastMsgID := int64(req.GetInt("last_msg_id", 0))
 	timeoutSec := req.GetInt("timeout_sec", DefaultTimeoutSec)
 
-	timeout := time.Duration(timeoutSec) * time.Second
-
-	room, err := s.manager.GetRoom(roomID)
+	resp, err := s.service.WaitForMessage(ctx, roomID, memberName, lastMsgID, timeoutSec)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
-
-	room.EnsureMember(memberName)
-
-	msgs, err := room.WaitForMessage(memberName, lastMsgID, timeout)
-	if err != nil {
-		if err == huddle.ErrRoomClosed {
-			return jsonResult(map[string]interface{}{
-				"result":   "Room closed",
-				"messages": []huddle.Message{},
-			})
-		}
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
-	if msgs == nil {
-		msgs = []huddle.Message{}
-	}
-
-	return jsonResult(map[string]interface{}{"messages": msgs})
+	return jsonResult(resp)
 }
 
 func (s *Server) handleListRooms(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	rooms := s.manager.ListRooms()
-	if rooms == nil {
-		rooms = []*huddle.Room{}
+	resp, err := s.service.ListRooms(ctx)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
 	}
-	return jsonResult(map[string]interface{}{"rooms": rooms})
+	return jsonResult(resp)
 }
 
 func (s *Server) handleCloseRoom(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	roomID := req.GetString("room_id", "")
 
-	room, err := s.manager.GetRoom(roomID)
+	resp, err := s.service.CloseRoom(ctx, roomID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
-	room.Close()
-	return jsonResult(map[string]interface{}{"result": "Room closed"})
+	return jsonResult(resp)
 }
 
 func (s *Server) handleLeaveRoom(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	roomID := req.GetString("room_id", "")
 	memberName := req.GetString("member_name", "")
 
-	room, err := s.manager.GetRoom(roomID)
+	resp, err := s.service.LeaveRoom(ctx, roomID, memberName)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
-
-	err = room.LeaveRoom(memberName)
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
-	return jsonResult(map[string]interface{}{
-		"result": fmt.Sprintf("Member '%s' has left the room", memberName),
-	})
+	return jsonResult(resp)
 }
