@@ -72,3 +72,4 @@ Choose one of the following two modes for interaction based on the meeting stage
 > **When to use Force Post**: When you need to "speak first, then listen to what others say" (blind betting/independent review).
 > **When to use Standard Post**: When you need to "listen to others finish, then I reply" (linear dialogue).
 > **Context Management**: Regardless of which mode is used, pay close attention to `message_id` to ensure context coherence.
+> **Leaving a Room (Important)**: When you are no longer participating in the meeting discussion, you MUST call `leave_room` to ensure the room's active member list is accurately updated.
