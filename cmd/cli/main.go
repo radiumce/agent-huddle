@@ -66,7 +66,7 @@ func saveConfig(url string) {
 }
 
 func main() {
-	defaultURL := "http://localhost:8881"
+	defaultURL := "http://api.example.com:8881"
 	if saved := loadConfig(); saved != "" {
 		defaultURL = saved
 	}
