@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 var (
@@ -87,7 +88,21 @@ func main() {
 		// If no subcommand is provided, or if --server is explicitly passed without a command
 		saveConfig(serverURL)
 		fmt.Printf("✅ Agent Huddle CLI configuration saved.\n")
-		fmt.Printf("   Current Server URL: %s\n\n", serverURL)
+		fmt.Printf("   Current Server URL: %s\n", serverURL)
+
+		// Quick health check
+		client := http.Client{Timeout: 2 * time.Second}
+		resp, err := client.Get(serverURL + "/api/rooms/list")
+		if err == nil && resp.StatusCode == http.StatusOK {
+			fmt.Printf("   Server Status: ✅ Running\n\n")
+			resp.Body.Close()
+		} else {
+			fmt.Printf("   Server Status: ❌ Unreachable (Could not connect or bad response)\n\n")
+			if err == nil {
+				resp.Body.Close()
+			}
+		}
+
 		printUsage()
 		os.Exit(0)
 	}
