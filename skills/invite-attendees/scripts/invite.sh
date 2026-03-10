@@ -29,15 +29,14 @@ if [ -z "$NAME" ] || [ -z "$PROMPT" ]; then
 fi
 
 # Start the agent in the background
-# The SKILL.md specifies using 'pi -p' for the prompt
-# To ensure output goes to stdout while in the background, we don't redirect to /dev/null by default.
+# We must redirect stdout and stderr so that the parent agent/shell does not block waiting for EOF.
 if [ "$LOGS" -eq 1 ]; then
     LOG_FILE="${NAME}_agent.log"
-    echo "Starting agent '$NAME'. Logs will be written to $LOG_FILE and stdout."
-    nohup pi -p "$PROMPT" 2>&1 | tee "$LOG_FILE" &
+    echo "Starting agent '$NAME'. Logs will be written to $LOG_FILE."
+    nohup pi -p "$PROMPT" > "$LOG_FILE" 2>&1 &
 else
-    echo "Starting agent '$NAME'. Outputting to stdout."
-    nohup pi -p "$PROMPT" 2>&1 &
+    echo "Starting agent '$NAME' in background."
+    nohup pi -p "$PROMPT" > /dev/null 2>&1 &
 fi
 
 echo "Agent '$NAME' started with PID $!"

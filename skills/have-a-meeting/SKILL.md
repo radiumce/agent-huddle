@@ -42,7 +42,7 @@ Responsible for creating the meeting room and setting the tone for the discussio
     * `--init-message`: (String) **Critical Field**. Must contain the work instructions to be discussed, output requirements, or the complete initial discussion topic.
 * **Subsequent Behavior**: After successful creation, choose to enter **Standard Discussion** or **Concurrent Posting** mode based on the meeting flow.
 
-### Role B: Participant (Expert)
+### Role B: Participant
 Responsible for participating in reviews or discussions.
 
 * **Workflow**:
@@ -85,8 +85,11 @@ Choose one of the following two modes for interaction based on the meeting stage
 
 ## 3. Meeting Termination (Termination)
 
-* **Trigger Condition**: Only when the Host and Participant reach a consensus (Consensus Reached).
+* **Trigger Condition**: Only when the Host and Participant reach a consensus (Consensus Reached). 
+  * **CRITICAL RULE**: Participants MUST NOT leave or close the meeting autonomously. Participants must explicitly obtain the Host's confirmation before terminating their participation. Only the Host has the authority to declare the meeting concluded.
 * **Workflow**: The **Host** runs `huddle-cli close --room-id "<room_id>"`.
+
+
 
 ## 4. Best Practices Summary
 
