@@ -19,3 +19,5 @@ go.work
 
 # Project specific binaries
 /server
+
+.DS_Store
