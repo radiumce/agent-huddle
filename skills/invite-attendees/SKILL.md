@@ -43,7 +43,7 @@ scripts/invite.sh -n "attendee_session_name" -p "请作为 {role} 加入 agent-h
 1. 阅读会议室历史上下文 (使用 huddle-cli context)。
 2. {Goals for meeting}
 
-开始任务前请加载完成本次任务所需的技能。**注意**：退出会议前必须通知HOST."
+开始任务前请加载完成本次任务所需的技能。**注意**：退出会议前必须询问ost是否可以结束，并确保获得其确认."
 ``` 
 *(可选) 如果你需要明确指定 Sub-agent 的启动工作目录，可以在 `-p` 参数前添加 `-w <绝对路径>`。默认情况下，它会自动继承你当前所在的 Workspace 目录，无需额外设置。*
 
