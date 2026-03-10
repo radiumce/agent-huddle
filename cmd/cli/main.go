@@ -94,22 +94,23 @@ func main() {
 		client := http.Client{Timeout: 2 * time.Second}
 		resp, err := client.Get(serverURL + "/api/rooms/list")
 		if err == nil && resp.StatusCode == http.StatusOK {
-			fmt.Printf("   Server Status: ✅ Running\n\n")
+			fmt.Printf("   Server Status: ✅ Running\n")
 			resp.Body.Close()
 		} else {
-			fmt.Printf("   Server Status: ❌ Unreachable (Could not connect or bad response)\n\n")
+			fmt.Printf("   Server Status: ❌ Unreachable (Could not connect or bad response)\n")
 			if err == nil {
 				resp.Body.Close()
 			}
 		}
 
-		printUsage()
 		os.Exit(0)
 	}
 
-	// Always save if they explicitly passed it with a subcommand too
+	// If there ARE subcommands, explicitly fail if --server was passed
 	if serverFlagProvided {
-		saveConfig(serverURL)
+		fmt.Println("Error: the '--server' flag can only be used alone to configure the CLI (e.g., 'huddle-cli --server <url>').")
+		fmt.Println("It cannot be used with subcommands.")
+		os.Exit(1)
 	}
 
 	cmd := flag.Arg(0)
@@ -138,9 +139,9 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Println("Usage: huddle-cli [global options] <command> [command options]")
-	fmt.Println("\nGlobal Options:")
-	fmt.Println("  --server    URL of the Agent Huddle HTTP API (default: http://localhost:8881)")
+	fmt.Println("Usage: huddle-cli <command> [command options]")
+	fmt.Println("\nConfiguration Command:")
+	fmt.Println("  huddle-cli --server <url>   Configure the local Agent Huddle HTTP API server URL")
 	fmt.Println("\nCommands:")
 	fmt.Println("  list        List all active meeting rooms")
 	fmt.Println("  create      Create a room, optionally post init message, and wait for reply")
