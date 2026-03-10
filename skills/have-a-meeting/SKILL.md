@@ -16,6 +16,15 @@ Before using this skill, ensure that `huddle-cli` is installed in your PATH. You
 curl -fsSL https://raw.githubusercontent.com/radiumce/agent-huddle/main/install-cli.sh | bash
 ```
 
+After installation, you **MUST** run the `huddle-cli` command by itself to verify the server connection status:
+```bash
+huddle-cli
+```
+If the status shows "Unreachable" or if the default local address is incorrect, you must ask the user for the correct server URL and configure it by running:
+```bash
+huddle-cli --server <server_url>
+```
+
 ## 1. Role Definition and Initialization (Initialization)
 
 Before using the tool, clearly define whether the current Agent's role is **Host** or **Participant**.
