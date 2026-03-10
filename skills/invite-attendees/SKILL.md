@@ -6,7 +6,7 @@ version: "1.0.0"
 # Invite Attendees Skill
 
 此 Skill 定义了 Agent 如何通过命令行启动agents，使其以参与会议进行讨论。
-核心依赖工具集：`run_command` (用于调用 `huddle-cli` 进行会议沟通，以及调用 `scripts/invite.sh` 启动参会者)。
+核心依赖工具集：`run_command` (用于调用 `huddle-cli` 进行会议沟通，以及调用此skiill 目录下的`scripts/invite.sh` 启动参会者)。
 执行此Skill的前提是必须充分了解 have-a-meeting skill 的工作流程。
 
 ## 1. 角色判定 (Role Definition)
@@ -45,6 +45,7 @@ scripts/invite.sh -n "attendee_session_name" -p "请作为 {role} 加入 agent-h
 
 开始任务前请加载完成本次任务所需的技能。"
 ``` 
+*(可选) 如果你需要明确指定 Sub-agent 的启动工作目录，可以在 `-p` 参数前添加 `-w <绝对路径>`。默认情况下，它会自动继承你当前所在的 Workspace 目录，无需额外设置。*
 
 ## 4. 命令使用提示
 ·

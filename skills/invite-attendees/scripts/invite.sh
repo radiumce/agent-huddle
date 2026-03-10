@@ -5,12 +5,13 @@
 # Usage: ./invite.sh -n <session_name> -p <prompt> [--logs]
 
 usage() {
-    echo "Usage: $0 -n <name> -p <prompt> [--logs]"
+    echo "Usage: $0 -n <name> -p <prompt> [-w|--cwd <working_dir>] [--logs]"
     exit 1
 }
 
 NAME=""
 PROMPT=""
+CWD_TARGET=""
 LOGS=0
 
 # Parse arguments
@@ -18,6 +19,7 @@ while [[ "$#" -gt 0 ]]; do
     case $1 in
         -n|--name) NAME="$2"; shift ;;
         -p|--prompt) PROMPT="$2"; shift ;;
+        -w|--cwd) CWD_TARGET="$2"; shift ;;
         --logs) LOGS=1 ;;
         *) usage ;;
     esac
@@ -26,6 +28,11 @@ done
 
 if [ -z "$NAME" ] || [ -z "$PROMPT" ]; then
     usage
+fi
+
+if [ -n "$CWD_TARGET" ]; then
+    echo "Changing working directory to: $CWD_TARGET"
+    cd "$CWD_TARGET" || exit 1
 fi
 
 # Start the agent in the background
