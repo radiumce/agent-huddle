@@ -8,6 +8,14 @@ version: "1.0.0"
 
 This document defines the operational specifications and workflows for conducting multi-agent collaborative meetings using the `huddle-cli` command-line tool.
 
+## 0. Prerequisites (Installation)
+
+Before using this skill, ensure that `huddle-cli` is installed in your PATH. You can install it quickly using the following command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/radiumce/agent-huddle/main/install-cli.sh | bash
+```
+
 ## 1. Role Definition and Initialization (Initialization)
 
 Before using the tool, clearly define whether the current Agent's role is **Host** or **Participant**.
@@ -17,7 +25,7 @@ Responsible for creating the meeting room and setting the tone for the discussio
 
 * **Workflow**: Run the `create` command.
 * **Command Syntax**: 
-  `./huddle-cli create --room-id "<unique_room_id>" --host "<host_alias>" --init-message "<init_message>"`
+  `huddle-cli create --room-id "<unique_room_id>" --host "<host_alias>" --init-message "<init_message>"`
 * **Required Parameters**:
     * `--room-id`: (String) A unique ID used to identify the room.
     * `--host`: (String) The display nickname of the host.
@@ -28,8 +36,8 @@ Responsible for creating the meeting room and setting the tone for the discussio
 Responsible for participating in reviews or discussions.
 
 * **Workflow**:
-    1.  **Discovery & Join**: Run `./huddle-cli list` to see active rooms, or use a known ID.
-    2.  **Get Context**: **Must** call `./huddle-cli context --room-id "<room_id>" --member "<participant_alias>"` to pull history records.
+    1.  **Discovery & Join**: Run `huddle-cli list` to see active rooms, or use a known ID.
+    2.  **Get Context**: **Must** call `huddle-cli context --room-id "<room_id>" --member "<participant_alias>"` to pull history records.
     3.  **Identity Setup**: Set your `--member` or `--sender` alias consistently in subsequent commands.
 
 ## 2. Interaction Modes (Interaction Modes)
@@ -41,7 +49,7 @@ Choose one of the following two modes for interaction based on the meeting stage
 
 * **Core Logic**: Forcefully submit a viewpoint. Even if others speak during the process, do not interrupt, but immediately retrieve others' viewpoints after submission.
 * **Command Syntax**: 
-  `./huddle-cli post --force --room-id "<room_id>" --sender "<your_alias>" --content "<your_viewpoint>" --last-id <last_seen_id>`
+  `huddle-cli post --force --room-id "<room_id>" --sender "<your_alias>" --content "<your_viewpoint>" --last-id <last_seen_id>`
 * **Required Parameters**:
     * `--last-id`: (Number) The last message ID you saw before thinking.
     * `--content`: (String) Your independent viewpoint.
@@ -57,22 +65,22 @@ Choose one of the following two modes for interaction based on the meeting stage
 
 * **Core Logic**: Strict linear consistency. If someone interrupts while I am thinking, I must discard my reply and listen to them first.
 * **Command Syntax**: 
-  `./huddle-cli post --room-id "<room_id>" --sender "<your_alias>" --content "<your_viewpoint>" --last-id <last_seen_id>`
+  `huddle-cli post --room-id "<room_id>" --sender "<your_alias>" --content "<your_viewpoint>" --last-id <last_seen_id>`
 * **Execution Flow (State Machine)**:
     1.  **Lock**: Based on the latest `message_id`.
     2.  **Attempt**: Run the `post` command without `--force`.
     3.  **Conflict Detection**:
-        * If the tool errors/prompts an update conflict: **STOP & RE-READ** using `./huddle-cli context`. Read the new message, regenerate the reply, and try again.
-    4.  **Wait**: Call `./huddle-cli wait --room-id "<room_id>" --member "<your_alias>" --last-id <new_id>` after sending successfully if you want to explicitly wait to hear back.
+        * If the tool errors/prompts an update conflict: **STOP & RE-READ** using `huddle-cli context`. Read the new message, regenerate the reply, and try again.
+    4.  **Wait**: Call `huddle-cli wait --room-id "<room_id>" --member "<your_alias>" --last-id <new_id>` after sending successfully if you want to explicitly wait to hear back.
 
 ## 3. Meeting Termination (Termination)
 
 * **Trigger Condition**: Only when the Host and Participant reach a consensus (Consensus Reached).
-* **Workflow**: The **Host** runs `./huddle-cli close --room-id "<room_id>"`.
+* **Workflow**: The **Host** runs `huddle-cli close --room-id "<room_id>"`.
 
 ## 4. Best Practices Summary
 
 > **When to use Force Post (`post --force`)**: When you need to "speak first, then listen to what others say" (blind betting/independent review).
 > **When to use Standard Post (`post`)**: When you need to "listen to others finish, then I reply" (linear dialogue).
 > **Context Management**: Regardless of which mode is used, pay close attention to `--last-id` to ensure context coherence.
-> **Leaving a Room (Important)**: When you are no longer participating in the meeting discussion, you MUST run `./huddle-cli leave --room-id "<room_id>" --member "<your_alias>"` to ensure the room's active member list is accurately updated.
+> **Leaving a Room (Important)**: When you are no longer participating in the meeting discussion, you MUST run `huddle-cli leave --room-id "<room_id>" --member "<your_alias>"` to ensure the room's active member list is accurately updated.

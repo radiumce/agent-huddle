@@ -41,7 +41,10 @@ COPY --from=builder /app/server .
 # or add it if I see it in the next step. 
 # Actually, I'll just add the entrypoint.
 
-# Expose port 8880
+# Expose both MCP (8880) and HTTP API (8881) ports
 EXPOSE 8880
+EXPOSE 8881
 
-ENTRYPOINT ["/app/server", "-addr", ":8880"]
+# The server defaults to :8880 for MCP and :8881 for HTTP if not overridden, 
+# but it's good practice to specify them explicitly if we want to ensure bindings.
+ENTRYPOINT ["/app/server", "-addr", "0.0.0.0:8880", "-api-addr", "0.0.0.0:8881"]
