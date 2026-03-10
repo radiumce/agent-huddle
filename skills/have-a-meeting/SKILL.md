@@ -20,10 +20,11 @@ After installation, you **MUST** run the `huddle-cli` command by itself to verif
 ```bash
 huddle-cli
 ```
-If the status shows "Unreachable" or if the default local address is incorrect, you must ask the user for the correct server URL and configure it by running:
+If the status shows "Unreachable" or if it fails to connect to the default local address, **you must ask the user for the correct server URL**. Once you obtain the correct URL from the user, configure it by running:
 ```bash
 huddle-cli --server <server_url>
 ```
+Do not proceed to use any other `huddle-cli` commands until the server is confirmed to be "Running".
 
 ## 1. Role Definition and Initialization (Initialization)
 
