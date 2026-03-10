@@ -144,7 +144,7 @@ func printUsage() {
 	fmt.Println("  huddle-cli --server <url>   Configure the local Agent Huddle HTTP API server URL")
 	fmt.Println("\nCommands:")
 	fmt.Println("  list        List all active meeting rooms")
-	fmt.Println("  create      Create a room, optionally post init message, and wait for reply")
+	fmt.Println("  create      Create a room, optionally post init message, and exit immediately")
 	fmt.Println("  post        Post a message and wait for new messages (use --force to skip conflict checking)")
 	fmt.Println("  wait        Wait for new messages in the room")
 	fmt.Println("  context     Get message history from a specific ID")
@@ -209,7 +209,6 @@ func handleCreate(args []string) {
 	name := fs.String("name", "", "Room name")
 	host := fs.String("host", "", "(Required) Host name")
 	initMsg := fs.String("init-message", "", "Initial message to post")
-	timeout := fs.Int("timeout", 300, "Timeout in seconds (0 means no wait for new messages)")
 	fs.Parse(args)
 
 	if *roomID == "" || *host == "" {
@@ -223,12 +222,9 @@ func handleCreate(args []string) {
 		"name":         *name,
 		"host":         *host,
 		"init_message": *initMsg,
-		"timeout_sec":  *timeout,
+		"timeout_sec":  0,
 	}
 
-	if *timeout > 0 {
-		fmt.Printf("[Waiting for new messages for %d seconds...]\n", *timeout)
-	}
 	doRequest("/api/rooms/create_and_wait", payload)
 }
 
