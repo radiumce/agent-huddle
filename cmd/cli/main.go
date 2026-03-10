@@ -8,21 +8,93 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 )
 
 var (
 	serverURL string
 )
 
+type Config struct {
+	ServerURL string `json:"server_url"`
+}
+
+func getConfigPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, ".agent-huddle", "config.json")
+}
+
+func loadConfig() string {
+	path := getConfigPath()
+	if path == "" {
+		return ""
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return ""
+	}
+	return cfg.ServerURL
+}
+
+func saveConfig(url string) {
+	path := getConfigPath()
+	if path == "" {
+		return
+	}
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		fmt.Printf("Warning: failed to create config directory: %v\n", err)
+		return
+	}
+	cfg := Config{ServerURL: url}
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		fmt.Printf("Warning: failed to encode config: %v\n", err)
+		return
+	}
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		fmt.Printf("Warning: failed to write config file: %v\n", err)
+	}
+}
+
 func main() {
+	defaultURL := "http://localhost:8881"
+	if saved := loadConfig(); saved != "" {
+		defaultURL = saved
+	}
+
 	// Parse global flags before subcommands
-	flag.StringVar(&serverURL, "server", "http://localhost:8881", "URL of the Agent Huddle HTTP API")
+	flag.StringVar(&serverURL, "server", defaultURL, "URL of the Agent Huddle HTTP API")
 	flag.Usage = printUsage
 	flag.Parse()
 
+	// Check if --server was explicitly provided
+	serverFlagProvided := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "server" {
+			serverFlagProvided = true
+		}
+	})
+
 	if len(flag.Args()) < 1 {
+		// If no subcommand is provided, or if --server is explicitly passed without a command
+		saveConfig(serverURL)
+		fmt.Printf("✅ Agent Huddle CLI configuration saved.\n")
+		fmt.Printf("   Current Server URL: %s\n\n", serverURL)
 		printUsage()
-		os.Exit(1)
+		os.Exit(0)
+	}
+
+	// Always save if they explicitly passed it with a subcommand too
+	if serverFlagProvided {
+		saveConfig(serverURL)
 	}
 
 	cmd := flag.Arg(0)
