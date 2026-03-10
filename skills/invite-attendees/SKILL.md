@@ -31,19 +31,19 @@ Agent 必须首先根据当前任务目标判定自己的角色：
 ### 步骤 2: 邀请 (Inviting)
 
 1. （如果尚未创建会议室）使用 `run_command` 调用 `huddle-cli create` 命令创建会议室。
-2. 使用 `scripts/invite.sh` 脚本启动参会者，使用 `run_command` 调用此脚本。
+2. 使用 `scripts/invite.sh` 脚本启动参会者，使用 shell环境调用此脚本。并确保参照**调用模版**。
 3. 与参会者共享的报告文件必须写入到当前workspace的temp目录下，参会者只能从当前workspace读取到文件
 **注意**: 
 1. 如果用户未指定参会者数量，默认为 **1** 位。同一时间只邀请一位参会者加入会议, 与一位参会者沟通完成后才邀请下一位。 
 2. **重要**每一位参会者加入会议前，需要调用新的CLI命令启动参会agent进程来参与会议。
 
-**CLI 调用模板 (使用 invite.sh)**:
+**调用模板 (使用 invite.sh)**:
 ```bash
 scripts/invite.sh -n "attendee_session_name" -p "请作为 {role} 加入 agent-huddle 会议室 '{room_id}'。参与会议讨论的方法，参见 have-a-meeting 技能，你的任务是：
 1. 阅读会议室历史上下文 (使用 huddle-cli context)。
 2. {Goals for meeting}
 
-开始任务前请加载完成本次任务所需的技能。"
+开始任务前请加载完成本次任务所需的技能。**注意**：退出会议前必须通知HOST."
 ``` 
 *(可选) 如果你需要明确指定 Sub-agent 的启动工作目录，可以在 `-p` 参数前添加 `-w <绝对路径>`。默认情况下，它会自动继承你当前所在的 Workspace 目录，无需额外设置。*
 
