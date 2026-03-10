@@ -1,0 +1,13 @@
+services:
+  agent-huddle:
+    image: ghcr.io/radiumce/agent-huddle:latest
+    container_name: agent-huddle
+    ports:
+      - "8880:8880"
+      - "8881:8881"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+    restart: always
